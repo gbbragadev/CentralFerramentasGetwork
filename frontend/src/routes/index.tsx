@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from '@/auth/ProtectedRoute';
 import { LoginPage } from '@/pages/LoginPage';
 import { TenantsPage } from '@/pages/TenantsPage';
+import { TenantProductsPage } from '@/pages/TenantProductsPage';
+import { ProductsPage } from '@/pages/ProductsPage';
 import { RulesPage } from '@/pages/RulesPage';
 import { SchedulesPage } from '@/pages/SchedulesPage';
 import { OutboxPage } from '@/pages/OutboxPage';
@@ -17,6 +19,22 @@ export function AppRoutes() {
           element={
             <ProtectedRoute>
               <TenantsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tenants/:tenantId/products"
+          element={
+            <ProtectedRoute>
+              <TenantProductsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/products"
+          element={
+            <ProtectedRoute>
+              <ProductsPage />
             </ProtectedRoute>
           }
         />

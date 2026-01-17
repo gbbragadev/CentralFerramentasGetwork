@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/layout/AppLayout';
 import { Button } from '@/components/Button';
 import { Table } from '@/components/Table';
@@ -6,21 +7,37 @@ import { Modal } from '@/components/Modal';
 import { Input } from '@/components/Input';
 import { apiClient } from '@/api/client';
 import { Tenant, SeniorCredentials } from '@/api/types';
-import { Plus, Edit, Trash2, Settings } from 'lucide-react';
+import { Plus, Edit, Trash2, Settings, Building2, AlertTriangle, Package } from 'lucide-react';
 import { toast } from 'sonner';
 
+// Função para gerar slug a partir do nome
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+    .replace(/[^a-z0-9\s-]/g, '') // Remove caracteres especiais
+    .trim()
+    .replace(/\s+/g, '-') // Substitui espaços por hífens
+    .replace(/-+/g, '-'); // Remove hífens duplicados
+}
+
 export function TenantsPage() {
+  const navigate = useNavigate();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCredentialsModalOpen, setIsCredentialsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const [formData, setFormData] = useState({ name: '', slug: '', active: true });
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [credentialsData, setCredentialsData] = useState({
     baseUrl: '',
     authToken: '',
     demoMode: false,
   });
+  const [submitting, setSubmitting] = useState(false);
 
   const loadTenants = async () => {
     setLoading(true);
@@ -35,26 +52,51 @@ export function TenantsPage() {
     loadTenants();
   }, []);
 
+  // Atualiza o slug automaticamente quando o nome muda (se não foi editado manualmente)
+  const handleNameChange = useCallback((name: string) => {
+    setFormData(prev => ({
+      ...prev,
+      name,
+      slug: slugManuallyEdited ? prev.slug : generateSlug(name)
+    }));
+  }, [slugManuallyEdited]);
+
+  const handleSlugChange = (slug: string) => {
+    setSlugManuallyEdited(true);
+    setFormData(prev => ({ ...prev, slug }));
+  };
+
   const handleCreate = () => {
     setSelectedTenant(null);
     setFormData({ name: '', slug: '', active: true });
+    setSlugManuallyEdited(false);
     setIsModalOpen(true);
   };
 
   const handleEdit = (tenant: Tenant) => {
     setSelectedTenant(tenant);
     setFormData({ name: tenant.name, slug: tenant.slug, active: tenant.active });
+    setSlugManuallyEdited(true); // Ao editar, considera que o slug já foi definido
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este tenant?')) return;
+  const handleDeleteClick = (tenant: Tenant) => {
+    setSelectedTenant(tenant);
+    setIsDeleteModalOpen(true);
+  };
 
-    const response = await apiClient.delete(`/tenants/${id}`);
+  const handleDeleteConfirm = async () => {
+    if (!selectedTenant) return;
+
+    setSubmitting(true);
+    const response = await apiClient.delete(`/tenants/${selectedTenant.id}`);
+    setSubmitting(false);
+
     if (response.error) {
       toast.error(response.error.message);
     } else {
       toast.success('Tenant excluído com sucesso');
+      setIsDeleteModalOpen(false);
       loadTenants();
     }
   };
@@ -62,9 +104,29 @@ export function TenantsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validações
+    if (!formData.name.trim()) {
+      toast.error('O nome é obrigatório');
+      return;
+    }
+
+    if (!formData.slug.trim()) {
+      toast.error('O identificador (slug) é obrigatório');
+      return;
+    }
+
+    // Valida formato do slug
+    const slugRegex = /^[a-z0-9-]+$/;
+    if (!slugRegex.test(formData.slug)) {
+      toast.error('O identificador deve conter apenas letras minúsculas, números e hífens');
+      return;
+    }
+
+    setSubmitting(true);
     const response = selectedTenant
       ? await apiClient.put(`/tenants/${selectedTenant.id}`, formData)
       : await apiClient.post('/tenants', formData);
+    setSubmitting(false);
 
     if (response.error) {
       toast.error(response.error.message);
@@ -81,9 +143,9 @@ export function TenantsPage() {
     
     if (response.data) {
       setCredentialsData({
-        baseUrl: response.data.baseUrl,
-        authToken: response.data.authToken,
-        demoMode: response.data.demoMode,
+        baseUrl: response.data.baseUrl || '',
+        authToken: response.data.authToken || '',
+        demoMode: response.data.demoMode || false,
       });
     } else {
       setCredentialsData({ baseUrl: '', authToken: '', demoMode: false });
@@ -96,10 +158,18 @@ export function TenantsPage() {
     e.preventDefault();
     if (!selectedTenant) return;
 
+    // Validação de URL
+    if (credentialsData.baseUrl && !credentialsData.baseUrl.startsWith('http')) {
+      toast.error('A URL base deve começar com http:// ou https://');
+      return;
+    }
+
+    setSubmitting(true);
     const response = await apiClient.post(
       `/tenants/${selectedTenant.id}/senior-credentials`,
       credentialsData
     );
+    setSubmitting(false);
 
     if (response.error) {
       toast.error(response.error.message);
@@ -110,14 +180,28 @@ export function TenantsPage() {
   };
 
   const columns = [
-    { header: 'Nome', accessor: 'name' as keyof Tenant },
-    { header: 'Slug', accessor: 'slug' as keyof Tenant },
+    { 
+      header: 'Nome', 
+      accessor: (row: Tenant) => (
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 rounded-lg bg-slate-100 flex items-center justify-center">
+            <Building2 className="h-5 w-5 text-slate-500" />
+          </div>
+          <div>
+            <div className="font-medium text-slate-900">{row.name}</div>
+            <div className="text-xs text-slate-500">{row.slug}</div>
+          </div>
+        </div>
+      ),
+    },
     {
       header: 'Status',
       accessor: (row: Tenant) => (
         <span
-          className={`px-2 py-1 text-xs rounded-full ${
-            row.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+          className={`inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full ${
+            row.active 
+              ? 'bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20' 
+              : 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/20'
           }`}
         >
           {row.active ? 'Ativo' : 'Inativo'}
@@ -127,14 +211,37 @@ export function TenantsPage() {
     {
       header: 'Ações',
       accessor: (row: Tenant) => (
-        <div className="flex gap-2">
-          <Button size="sm" variant="ghost" onClick={() => handleCredentials(row)}>
+        <div className="flex gap-1">
+          <Button 
+            size="sm" 
+            variant="ghost" 
+            onClick={() => navigate(`/tenants/${row.id}/products`)}
+            title="Gerenciar produtos"
+          >
+            <Package className="h-4 w-4" />
+          </Button>
+          <Button 
+            size="sm" 
+            variant="ghost" 
+            onClick={() => handleCredentials(row)}
+            title="Configurar credenciais Senior"
+          >
             <Settings className="h-4 w-4" />
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => handleEdit(row)}>
+          <Button 
+            size="sm" 
+            variant="ghost" 
+            onClick={() => handleEdit(row)}
+            title="Editar tenant"
+          >
             <Edit className="h-4 w-4" />
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => handleDelete(row.id)}>
+          <Button 
+            size="sm" 
+            variant="ghost" 
+            onClick={() => handleDeleteClick(row)}
+            title="Excluir tenant"
+          >
             <Trash2 className="h-4 w-4 text-red-600" />
           </Button>
         </div>
@@ -153,24 +260,49 @@ export function TenantsPage() {
           </Button>
         </div>
 
-        <Table columns={columns} data={tenants} loading={loading} />
+        <Table 
+          columns={columns} 
+          data={tenants} 
+          loading={loading}
+          emptyMessage="Nenhum tenant cadastrado"
+          emptyAction={
+            <Button onClick={handleCreate} size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Criar primeiro tenant
+            </Button>
+          }
+        />
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={selectedTenant ? 'Editar Tenant' : 'Novo Tenant'}>
+      {/* Modal de Criação/Edição */}
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        title={selectedTenant ? 'Editar Tenant' : 'Novo Tenant'}
+      >
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
-            label="Nome"
+            label="Nome da Empresa"
             value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            onChange={(e) => handleNameChange(e.target.value)}
+            placeholder="Ex: Atrio Hotéis"
             required
           />
-          <Input
-            label="Slug"
-            value={formData.slug}
-            onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-            required
-          />
-          <div className="flex items-center gap-2">
+          
+          <div className="space-y-1">
+            <Input
+              label="Identificador (Slug)"
+              value={formData.slug}
+              onChange={(e) => handleSlugChange(e.target.value.toLowerCase())}
+              placeholder="Ex: atrio-hoteis"
+              required
+            />
+            <p className="text-xs text-slate-500">
+              Identificador único usado em URLs e integrações. Gerado automaticamente a partir do nome.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 pt-2">
             <input
               type="checkbox"
               id="active"
@@ -178,38 +310,52 @@ export function TenantsPage() {
               onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
               className="h-4 w-4 text-primary focus:ring-primary border-slate-300 rounded"
             />
-            <label htmlFor="active" className="text-sm text-slate-700">Ativo</label>
+            <label htmlFor="active" className="text-sm text-slate-700">
+              Tenant ativo
+            </label>
           </div>
-          <div className="flex justify-end gap-2 pt-4">
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
             <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>
               Cancelar
             </Button>
-            <Button type="submit">Salvar</Button>
+            <Button type="submit" loading={submitting}>
+              {selectedTenant ? 'Salvar Alterações' : 'Criar Tenant'}
+            </Button>
           </div>
         </form>
       </Modal>
 
+      {/* Modal de Credenciais Senior */}
       <Modal
         isOpen={isCredentialsModalOpen}
         onClose={() => setIsCredentialsModalOpen(false)}
-        title="Credenciais Senior"
+        title={`Credenciais Senior - ${selectedTenant?.name || ''}`}
       >
         <form onSubmit={handleCredentialsSubmit} className="space-y-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+            Configure as credenciais de acesso à API Senior X para este tenant.
+          </div>
+
           <Input
-            label="Base URL"
+            label="URL Base da API"
             type="url"
             value={credentialsData.baseUrl}
             onChange={(e) => setCredentialsData({ ...credentialsData, baseUrl: e.target.value })}
-            placeholder="https://api.senior.com.br"
+            placeholder="https://platform.senior.com.br"
             required
           />
+          
           <Input
-            label="Auth Token"
+            label="Token de Autenticação"
+            type="password"
             value={credentialsData.authToken}
             onChange={(e) => setCredentialsData({ ...credentialsData, authToken: e.target.value })}
+            placeholder="Bearer token ou API key"
             required
           />
-          <div className="flex items-center gap-2">
+
+          <div className="flex items-center gap-2 pt-2">
             <input
               type="checkbox"
               id="demoMode"
@@ -217,15 +363,58 @@ export function TenantsPage() {
               onChange={(e) => setCredentialsData({ ...credentialsData, demoMode: e.target.checked })}
               className="h-4 w-4 text-primary focus:ring-primary border-slate-300 rounded"
             />
-            <label htmlFor="demoMode" className="text-sm text-slate-700">Modo Demo</label>
+            <label htmlFor="demoMode" className="text-sm text-slate-700">
+              Modo Demo (usa dados simulados)
+            </label>
           </div>
-          <div className="flex justify-end gap-2 pt-4">
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
             <Button type="button" variant="secondary" onClick={() => setIsCredentialsModalOpen(false)}>
               Cancelar
             </Button>
-            <Button type="submit">Salvar</Button>
+            <Button type="submit" loading={submitting}>
+              Salvar Credenciais
+            </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Modal de Confirmação de Exclusão */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="Confirmar Exclusão"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+            </div>
+            <div>
+              <p className="text-slate-900 font-medium">
+                Excluir tenant "{selectedTenant?.name}"?
+              </p>
+              <p className="text-sm text-slate-500 mt-1">
+                Esta ação não pode ser desfeita. Todos os dados associados a este tenant 
+                (regras, agendamentos, mensagens e logs) serão permanentemente removidos.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button type="button" variant="secondary" onClick={() => setIsDeleteModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              type="button" 
+              variant="danger" 
+              onClick={handleDeleteConfirm}
+              loading={submitting}
+            >
+              Excluir Tenant
+            </Button>
+          </div>
+        </div>
       </Modal>
     </AppLayout>
   );

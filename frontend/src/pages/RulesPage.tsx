@@ -6,7 +6,7 @@ import { Modal } from '@/components/Modal';
 import { Input } from '@/components/Input';
 import { apiClient } from '@/api/client';
 import { Rule, Tenant } from '@/api/types';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, FileText, AlertTriangle, MessageSquare, Zap, Info } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function RulesPage() {
@@ -14,8 +14,10 @@ export function RulesPage() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedRule, setSelectedRule] = useState<Rule | null>(null);
   const [filterTenantId, setFilterTenantId] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     tenantId: '',
     name: '',
@@ -52,7 +54,7 @@ export function RulesPage() {
   const handleCreate = () => {
     setSelectedRule(null);
     setFormData({
-      tenantId: '',
+      tenantId: filterTenantId || '',
       name: '',
       enabled: true,
       providerType: 'MOCK_WHATSAPP',
@@ -79,14 +81,23 @@ export function RulesPage() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta regra?')) return;
+  const handleDeleteClick = (rule: Rule) => {
+    setSelectedRule(rule);
+    setIsDeleteModalOpen(true);
+  };
 
-    const response = await apiClient.delete(`/rules/${id}`);
+  const handleDeleteConfirm = async () => {
+    if (!selectedRule) return;
+
+    setSubmitting(true);
+    const response = await apiClient.delete(`/rules/${selectedRule.id}`);
+    setSubmitting(false);
+
     if (response.error) {
       toast.error(response.error.message);
     } else {
       toast.success('Regra excluída com sucesso');
+      setIsDeleteModalOpen(false);
       loadRules();
     }
   };
@@ -94,9 +105,21 @@ export function RulesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!formData.tenantId) {
+      toast.error('Selecione um tenant');
+      return;
+    }
+
+    if (!formData.name.trim()) {
+      toast.error('O nome é obrigatório');
+      return;
+    }
+
+    setSubmitting(true);
     const response = selectedRule
       ? await apiClient.put(`/rules/${selectedRule.id}`, formData)
       : await apiClient.post('/rules', formData);
+    setSubmitting(false);
 
     if (response.error) {
       toast.error(response.error.message);
@@ -108,32 +131,70 @@ export function RulesPage() {
   };
 
   const columns = [
-    { header: 'Nome', accessor: 'name' as keyof Rule },
     {
-      header: 'Tenant',
-      accessor: (row: Rule) => tenants.find((t) => t.id === row.tenantId)?.name || row.tenantId,
+      header: 'Regra',
+      accessor: (row: Rule) => (
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 rounded-lg bg-blue-100 flex items-center justify-center">
+            <FileText className="h-5 w-5 text-blue-600" />
+          </div>
+          <div>
+            <div className="font-medium text-slate-900">{row.name}</div>
+            <div className="text-xs text-slate-500">
+              {tenants.find((t) => t.id === row.tenantId)?.name || 'Tenant desconhecido'}
+            </div>
+          </div>
+        </div>
+      ),
     },
     {
       header: 'Status',
       accessor: (row: Rule) => (
         <span
-          className={`px-2 py-1 text-xs rounded-full ${
-            row.enabled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+          className={`inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full ${
+            row.enabled
+              ? 'bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20'
+              : 'bg-slate-50 text-slate-600 ring-1 ring-inset ring-slate-500/20'
           }`}
         >
           {row.enabled ? 'Ativo' : 'Inativo'}
         </span>
       ),
     },
-    { header: 'Provider', accessor: 'providerType' as keyof Rule },
+    {
+      header: 'Provider',
+      accessor: (row: Rule) => (
+        <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded ${
+          row.providerType === 'MOCK_WHATSAPP' 
+            ? 'bg-orange-50 text-orange-700' 
+            : 'bg-green-50 text-green-700'
+        }`}>
+          <MessageSquare className="h-3 w-3 mr-1" />
+          {row.providerType === 'MOCK_WHATSAPP' ? 'Mock' : 'Meta'}
+        </span>
+      ),
+    },
+    {
+      header: 'Estratégia',
+      accessor: (row: Rule) => (
+        <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded ${
+          row.pollStrategy === 'POLL_ENDPOINT' 
+            ? 'bg-blue-50 text-blue-700' 
+            : 'bg-purple-50 text-purple-700'
+        }`}>
+          <Zap className="h-3 w-3 mr-1" />
+          {row.pollStrategy === 'POLL_ENDPOINT' ? 'Polling' : 'Demo'}
+        </span>
+      ),
+    },
     {
       header: 'Ações',
       accessor: (row: Rule) => (
-        <div className="flex gap-2">
-          <Button size="sm" variant="ghost" onClick={() => handleEdit(row)}>
+        <div className="flex gap-1">
+          <Button size="sm" variant="ghost" onClick={() => handleEdit(row)} title="Editar regra">
             <Edit className="h-4 w-4" />
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => handleDelete(row.id)}>
+          <Button size="sm" variant="ghost" onClick={() => handleDeleteClick(row)} title="Excluir regra">
             <Trash2 className="h-4 w-4 text-red-600" />
           </Button>
         </div>
@@ -144,39 +205,62 @@ export function RulesPage() {
   return (
     <AppLayout title="Regras">
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div className="flex gap-4 items-center">
-            <p className="text-slate-600">Gerencie as regras de notificação</p>
-            <select
-              value={filterTenantId}
-              onChange={(e) => setFilterTenantId(e.target.value)}
-              className="px-4 py-2 border border-slate-300 rounded-md text-sm"
-            >
-              <option value="">Todos os tenants</option>
-              {tenants.map((tenant) => (
-                <option key={tenant.id} value={tenant.id}>
-                  {tenant.name}
-                </option>
-              ))}
-            </select>
+        {/* Filters */}
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+          <div className="flex flex-wrap gap-4 items-center justify-between">
+            <div className="flex gap-4 items-center">
+              <div className="min-w-[200px]">
+                <label className="block text-xs font-medium text-slate-500 mb-1">Filtrar por Tenant</label>
+                <select
+                  value={filterTenantId}
+                  onChange={(e) => setFilterTenantId(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                >
+                  <option value="">Todos os tenants</option>
+                  {tenants.map((tenant) => (
+                    <option key={tenant.id} value={tenant.id}>
+                      {tenant.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <Button onClick={handleCreate}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Regra
+            </Button>
           </div>
-          <Button onClick={handleCreate}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Regra
-          </Button>
         </div>
 
-        <Table columns={columns} data={rules} loading={loading} />
+        {/* Table */}
+        <Table 
+          columns={columns} 
+          data={rules} 
+          loading={loading}
+          emptyMessage="Nenhuma regra cadastrada"
+          emptyAction={
+            <Button onClick={handleCreate} size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Criar primeira regra
+            </Button>
+          }
+        />
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={selectedRule ? 'Editar Regra' : 'Nova Regra'}>
+      {/* Create/Edit Modal */}
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        title={selectedRule ? 'Editar Regra' : 'Nova Regra'}
+      >
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Tenant Selection */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Tenant</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Tenant</label>
             <select
               value={formData.tenantId}
               onChange={(e) => setFormData({ ...formData, tenantId: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-md"
+              className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
               required
             >
               <option value="">Selecione um tenant</option>
@@ -189,63 +273,86 @@ export function RulesPage() {
           </div>
 
           <Input
-            label="Nome"
+            label="Nome da Regra"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            placeholder="Ex: Notificar documentos pendentes"
             required
           />
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Provider Type</label>
-            <select
-              value={formData.providerType}
-              onChange={(e) => setFormData({ ...formData, providerType: e.target.value as any })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-md"
-            >
-              <option value="MOCK_WHATSAPP">MOCK_WHATSAPP</option>
-              <option value="META_WHATSAPP">META_WHATSAPP</option>
-            </select>
+          {/* Provider and Strategy */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Provider</label>
+              <select
+                value={formData.providerType}
+                onChange={(e) => setFormData({ ...formData, providerType: e.target.value as 'MOCK_WHATSAPP' | 'META_WHATSAPP' })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+              >
+                <option value="MOCK_WHATSAPP">Mock WhatsApp</option>
+                <option value="META_WHATSAPP">Meta WhatsApp</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Estratégia</label>
+              <select
+                value={formData.pollStrategy}
+                onChange={(e) => setFormData({ ...formData, pollStrategy: e.target.value as 'POLL_ENDPOINT' | 'DEMO_FAKE' })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+              >
+                <option value="POLL_ENDPOINT">Polling de Endpoint</option>
+                <option value="DEMO_FAKE">Dados Demo</option>
+              </select>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Poll Strategy</label>
-            <select
-              value={formData.pollStrategy}
-              onChange={(e) => setFormData({ ...formData, pollStrategy: e.target.value as any })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-md"
-            >
-              <option value="POLL_ENDPOINT">POLL_ENDPOINT</option>
-              <option value="DEMO_FAKE">DEMO_FAKE</option>
-            </select>
+          {/* Senior Endpoint */}
+          <div className="space-y-1">
+            <Input
+              label="Endpoint Senior X"
+              value={formData.seniorEndpointPath}
+              onChange={(e) => setFormData({ ...formData, seniorEndpointPath: e.target.value })}
+              placeholder="/platform/ecm_ged/queries/listEnvelopes"
+              required
+            />
+            <p className="text-xs text-slate-500 flex items-center gap-1">
+              <Info className="h-3 w-3" />
+              Caminho do endpoint na API Senior X para buscar dados
+            </p>
           </div>
 
-          <Input
-            label="Senior Endpoint Path"
-            value={formData.seniorEndpointPath}
-            onChange={(e) => setFormData({ ...formData, seniorEndpointPath: e.target.value })}
-            placeholder="/api/v1/notifications"
-            required
-          />
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Message Template</label>
+          {/* Message Template */}
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-slate-700">Template da Mensagem</label>
             <textarea
               value={formData.messageTemplate}
               onChange={(e) => setFormData({ ...formData, messageTemplate: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-md"
+              className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
               rows={4}
+              placeholder="Olá {{nome}}, você tem um documento pendente: {{documento}}"
               required
             />
+            <p className="text-xs text-slate-500">
+              Use {"{{campo}}"} para variáveis dinâmicas
+            </p>
           </div>
 
-          <Input
-            label="Recipient Strategy"
-            value={formData.recipientStrategy}
-            onChange={(e) => setFormData({ ...formData, recipientStrategy: e.target.value })}
-            required
-          />
+          {/* Recipient Strategy */}
+          <div className="space-y-1">
+            <Input
+              label="Estratégia de Destinatário"
+              value={formData.recipientStrategy}
+              onChange={(e) => setFormData({ ...formData, recipientStrategy: e.target.value })}
+              placeholder="signers[0].phone"
+              required
+            />
+            <p className="text-xs text-slate-500">
+              Campo ou expressão para extrair o telefone do destinatário
+            </p>
+          </div>
 
-          <div className="flex items-center gap-2">
+          {/* Enabled Toggle */}
+          <div className="flex items-center gap-2 pt-2">
             <input
               type="checkbox"
               id="enabled"
@@ -253,16 +360,57 @@ export function RulesPage() {
               onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })}
               className="h-4 w-4 text-primary focus:ring-primary border-slate-300 rounded"
             />
-            <label htmlFor="enabled" className="text-sm text-slate-700">Ativo</label>
+            <label htmlFor="enabled" className="text-sm text-slate-700">
+              Regra ativa
+            </label>
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
+          <div className="flex justify-end gap-2 pt-4 border-t">
             <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>
               Cancelar
             </Button>
-            <Button type="submit">Salvar</Button>
+            <Button type="submit" loading={submitting}>
+              {selectedRule ? 'Salvar Alterações' : 'Criar Regra'}
+            </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="Confirmar Exclusão"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+            </div>
+            <div>
+              <p className="text-slate-900 font-medium">
+                Excluir regra "{selectedRule?.name}"?
+              </p>
+              <p className="text-sm text-slate-500 mt-1">
+                Esta ação não pode ser desfeita. Todas as mensagens e logs associados a esta regra serão mantidos.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button type="button" variant="secondary" onClick={() => setIsDeleteModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              onClick={handleDeleteConfirm}
+              loading={submitting}
+            >
+              Excluir Regra
+            </Button>
+          </div>
+        </div>
       </Modal>
     </AppLayout>
   );
