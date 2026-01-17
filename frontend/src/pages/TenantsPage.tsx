@@ -333,39 +333,59 @@ export function TenantsPage() {
         title={`Credenciais Senior - ${selectedTenant?.name || ''}`}
       >
         <form onSubmit={handleCredentialsSubmit} className="space-y-4">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-            Configure as credenciais de acesso à API Senior X para este tenant.
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
+            <p className="font-medium text-blue-900 mb-2">Configuração da API Senior X</p>
+            <p className="text-blue-700">
+              Configure as credenciais para que o sistema possa se comunicar com a plataforma Senior X.
+              O token pode ser obtido através do endpoint de login ou no portal do desenvolvedor.
+            </p>
           </div>
 
-          <Input
-            label="URL Base da API"
-            type="url"
-            value={credentialsData.baseUrl}
-            onChange={(e) => setCredentialsData({ ...credentialsData, baseUrl: e.target.value })}
-            placeholder="https://platform.senior.com.br"
-            required
-          />
-          
-          <Input
-            label="Token de Autenticação"
-            type="password"
-            value={credentialsData.authToken}
-            onChange={(e) => setCredentialsData({ ...credentialsData, authToken: e.target.value })}
-            placeholder="Bearer token ou API key"
-            required
-          />
-
-          <div className="flex items-center gap-2 pt-2">
-            <input
-              type="checkbox"
-              id="demoMode"
-              checked={credentialsData.demoMode}
-              onChange={(e) => setCredentialsData({ ...credentialsData, demoMode: e.target.checked })}
-              className="h-4 w-4 text-primary focus:ring-primary border-slate-300 rounded"
+          <div className="space-y-1">
+            <Input
+              label="URL Base da API"
+              type="url"
+              value={credentialsData.baseUrl}
+              onChange={(e) => setCredentialsData({ ...credentialsData, baseUrl: e.target.value })}
+              placeholder="https://platform.senior.com.br"
+              required
             />
-            <label htmlFor="demoMode" className="text-sm text-slate-700">
-              Modo Demo (usa dados simulados)
-            </label>
+            <p className="text-xs text-slate-500">
+              URL base da plataforma Senior X. Padrão: https://platform.senior.com.br
+            </p>
+          </div>
+          
+          <div className="space-y-1">
+            <Input
+              label="Token de Autenticação"
+              type="password"
+              value={credentialsData.authToken}
+              onChange={(e) => setCredentialsData({ ...credentialsData, authToken: e.target.value })}
+              placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              required
+            />
+            <p className="text-xs text-slate-500">
+              Token JWT obtido via POST /platform/authentication/actions/login
+            </p>
+          </div>
+
+          <div className="bg-slate-50 rounded-lg p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="demoMode"
+                checked={credentialsData.demoMode}
+                onChange={(e) => setCredentialsData({ ...credentialsData, demoMode: e.target.checked })}
+                className="h-4 w-4 text-primary focus:ring-primary border-slate-300 rounded"
+              />
+              <label htmlFor="demoMode" className="text-sm font-medium text-slate-700">
+                Modo Demo
+              </label>
+            </div>
+            <p className="text-xs text-slate-500 ml-6">
+              Quando ativado, o sistema usa dados simulados em vez de chamar a API real.
+              Útil para testes e demonstrações.
+            </p>
           </div>
 
           <div className="flex justify-end gap-2 pt-4 border-t">

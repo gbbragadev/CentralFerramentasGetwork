@@ -8,6 +8,7 @@ import { RulesPage } from '@/pages/RulesPage';
 import { SchedulesPage } from '@/pages/SchedulesPage';
 import { OutboxPage } from '@/pages/OutboxPage';
 import { LogsPage } from '@/pages/LogsPage';
+import { DocsPage } from '@/pages/DocsPage';
 
 export function AppRoutes() {
   return (
@@ -67,6 +68,14 @@ export function AppRoutes() {
           element={
             <ProtectedRoute>
               <LogsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/docs"
+          element={
+            <ProtectedRoute>
+              <DocsPage />
             </ProtectedRoute>
           }
         />

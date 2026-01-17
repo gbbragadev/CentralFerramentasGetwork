@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Building2, Users, FileText, Calendar, Send, FileCheck, Package } from 'lucide-react';
+import { Building2, Users, FileText, Calendar, Send, FileCheck, Package, Book } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navSections = [
@@ -22,6 +22,12 @@ const navSections = [
     items: [
       { to: '/outbox', icon: Send, label: 'Mensagens' },
       { to: '/logs', icon: FileCheck, label: 'Logs' },
+    ],
+  },
+  {
+    title: 'Suporte',
+    items: [
+      { to: '/docs', icon: Book, label: 'Documentação' },
     ],
   },
 ];
