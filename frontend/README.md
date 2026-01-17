@@ -27,47 +27,108 @@ npm install
 
 ## ⚙️ Configuração
 
-1. Copie o arquivo de exemplo de variáveis de ambiente:
+### Desenvolvimento Local (Padrão)
+
+O frontend detecta automaticamente o ambiente. Para desenvolvimento local, não precisa configurar nada:
 
 ```bash
-cp .env.example .env
-```
-
-2. Configure a URL da API no arquivo `.env`:
-
-```env
-VITE_API_URL=http://localhost:4000
-```
-
-**Nota:** Se a variável `VITE_API_URL` não for definida, o frontend usará `http://localhost:4000` como padrão.
-
-### Configuração para acesso em rede local
-
-Para acessar o frontend de outros dispositivos na mesma rede:
-
-```env
-VITE_API_URL=http://SEU_IP:4000
-```
-
-Substitua `SEU_IP` pelo endereço IP da máquina onde a API está rodando.
-
-## 🏃 Executar em Desenvolvimento
-
-```bash
-pnpm dev
-# ou
 npm run dev
 ```
 
-O frontend estará disponível em:
-- **Local:** http://localhost:3000
-- **Rede:** http://SEU_IP:3000
+### Configuração Manual (Opcional)
+
+1. Copie o arquivo de exemplo:
+
+```bash
+cp .env.example .env.local
+```
+
+2. Configure conforme necessário:
+
+```env
+# Deixe vazio para detecção automática (recomendado)
+VITE_API_URL=
+
+# Ou defina explicitamente:
+VITE_API_URL=http://localhost:4000
+```
+
+## 🏃 Scripts de Deploy
+
+Criamos scripts para facilitar o deploy em diferentes ambientes:
+
+### Windows (PowerShell)
+
+```powershell
+# Desenvolvimento local
+.\scripts\deploy.ps1 local
+
+# Cloudflare Tunnel (teste)
+.\scripts\deploy.ps1 tunnel
+
+# Build de produção
+.\scripts\deploy.ps1 production
+```
+
+### Linux/Mac
+
+```bash
+# Desenvolvimento local
+./scripts/deploy.sh local
+
+# Cloudflare Tunnel (teste)
+./scripts/deploy.sh tunnel
+
+# Build de produção
+./scripts/deploy.sh production
+```
+
+## 🌐 Cloudflare Tunnel
+
+O frontend suporta automaticamente o Cloudflare Tunnel para expor o projeto na internet sem IP fixo.
+
+### Como funciona a detecção automática
+
+O `api/client.ts` detecta o ambiente automaticamente:
+
+1. **VITE_API_URL definida** → Usa a URL configurada
+2. **localhost** → Usa `http://localhost:4000`
+3. **\*.trycloudflare.com** → Usa `api-*.trycloudflare.com`
+4. **Domínio customizado** → Usa `api.{domínio}`
+
+### Exemplo com Cloudflare Tunnel
+
+Se seu frontend está em:
+```
+https://getwork-portal.trycloudflare.com
+```
+
+A API será detectada automaticamente em:
+```
+https://api-getwork-portal.trycloudflare.com
+```
+
+### Configuração do Túnel
+
+1. Instale o cloudflared:
+```powershell
+winget install Cloudflare.cloudflared
+```
+
+2. Inicie túneis para frontend e API:
+```powershell
+# Terminal 1: Frontend
+cloudflared tunnel --url http://localhost:5173
+
+# Terminal 2: API
+cloudflared tunnel --url http://localhost:4000
+```
+
+3. Anote as URLs geradas e configure no `config.yml` do cloudflared.
 
 ## 🏗️ Build para Produção
 
 ```bash
-pnpm build
-# ou
 npm run build
 ```
 
@@ -75,11 +136,7 @@ Os arquivos otimizados serão gerados na pasta `dist/`.
 
 ## 👀 Preview da Build
 
-Após fazer o build, você pode testar a versão de produção localmente:
-
 ```bash
-pnpm preview
-# ou
 npm run preview
 ```
 
@@ -89,41 +146,49 @@ npm run preview
 frontend/
 ├── src/
 │   ├── api/              # Cliente HTTP e tipos da API
-│   │   ├── client.ts     # Configuração do cliente HTTP
-│   │   └── types.ts      # Tipos TypeScript da API
+│   │   ├── client.ts     # Cliente com detecção automática de ambiente
+│   │   ├── types.ts      # Tipos TypeScript da API
+│   │   └── seniorx.types.ts # Tipos para integração Senior X
 │   ├── auth/             # Autenticação e proteção de rotas
-│   │   ├── AuthContext.tsx
-│   │   └── ProtectedRoute.tsx
 │   ├── components/       # Componentes reutilizáveis
-│   │   ├── Button.tsx
-│   │   ├── Input.tsx
-│   │   ├── Modal.tsx
-│   │   └── Table.tsx
 │   ├── layout/           # Layout da aplicação
-│   │   ├── AppLayout.tsx
-│   │   ├── Header.tsx
-│   │   └── Sidebar.tsx
 │   ├── lib/              # Utilitários
-│   │   └── utils.ts
 │   ├── pages/            # Páginas da aplicação
-│   │   ├── LoginPage.tsx
-│   │   ├── TenantsPage.tsx
-│   │   ├── RulesPage.tsx
-│   │   ├── SchedulesPage.tsx
-│   │   ├── OutboxPage.tsx
-│   │   └── LogsPage.tsx
-│   ├── routes/           # Configuração de rotas
-│   │   └── index.tsx
-│   ├── App.tsx           # Componente raiz
-│   ├── main.tsx          # Entry point
-│   └── index.css         # Estilos globais
-├── public/               # Arquivos estáticos
-├── .env.example          # Exemplo de variáveis de ambiente
-├── package.json
-├── vite.config.ts
-├── tailwind.config.js
-└── tsconfig.json
+│   └── routes/           # Configuração de rotas
+├── scripts/              # Scripts de deploy
+│   ├── deploy.ps1        # Windows
+│   └── deploy.sh         # Linux/Mac
+├── .env.example          # Exemplo de variáveis
+├── .env.local.example    # Exemplo para desenvolvimento
+├── .env.production       # Configuração de produção
+└── package.json
 ```
+
+## 📄 Páginas
+
+### Autenticação
+- `/login` - Login de usuários
+- `/register` - Cadastro de novos usuários
+- `/forgot-password` - Recuperação de senha
+- `/reset-password` - Redefinição de senha
+
+### Gestão
+- `/tenants` - Gerenciamento de clientes
+- `/tenants/:id` - Detalhes do tenant (credenciais, WhatsApp)
+- `/tenants/:id/products` - Produtos do tenant
+- `/products` - Catálogo de produtos
+
+### Automação WhatsApp
+- `/sources` - Fontes de dados (Sign, ECM, Custom)
+- `/templates` - Templates de mensagem
+- `/jobs` - Jobs de envio automático
+
+### Monitoramento
+- `/outbox` - Mensagens enviadas
+- `/logs` - Logs de execução
+
+### Suporte
+- `/docs` - Documentação da API
 
 ## 🔐 Autenticação
 
@@ -131,110 +196,50 @@ O sistema utiliza autenticação JWT:
 
 1. Faça login com suas credenciais na página `/login`
 2. O token é armazenado no `localStorage`
-3. Todas as requisições para a API incluem o token no header `Authorization: Bearer <token>`
-4. Se o token expirar ou for inválido, você será redirecionado para a página de login
-
-### Credenciais Padrão
-
-Use as credenciais configuradas no backend (arquivo `.env` do backend):
-
-```
-Email: admin@suaempresa.com.br
-Senha: SuaSenhaForte123!
-```
-
-## 📄 Páginas
-
-### 1. Login (`/login`)
-- Autenticação de usuários
-- Validação de credenciais
-- Redirecionamento automático se já estiver autenticado
-
-### 2. Tenants (`/tenants`)
-- Listar, criar, editar e excluir tenants
-- Configurar credenciais Senior para cada tenant
-- Filtros e paginação
-
-### 3. Regras (`/rules`)
-- Gerenciar regras de notificação
-- Configurar providers (MOCK_WHATSAPP, META_WHATSAPP)
-- Definir estratégias de polling e templates de mensagem
-- Filtrar por tenant
-
-### 4. Agendamentos (`/schedules`)
-- Criar e gerenciar agendamentos cron
-- Executar manualmente agendamentos
-- Configurar timezone
-- Filtrar por tenant
-
-### 5. Mensagens (`/outbox`)
-- Visualizar mensagens enviadas
-- Ver detalhes e metadados
-- Simular status de mensagens (apenas MOCK_WHATSAPP)
-- Filtrar por tenant e status
-
-### 6. Logs (`/logs`)
-- Visualizar logs de execução
-- Ver detalhes de erros
-- Filtrar por tenant e status
+3. Todas as requisições incluem o token no header `Authorization: Bearer <token>`
+4. Se o token expirar, você será redirecionado para login
 
 ## 🎨 Design System
 
-O frontend segue um design system profissional e clean:
-
 - **Cores:** Paleta sóbria com azul como cor primária
-- **Tipografia:** Sistema de fontes nativo do sistema operacional
-- **Espaçamento:** Consistente e baseado em múltiplos de 4px
-- **Componentes:** Cards, tabelas, modais e formulários bem acabados
-- **Feedback:** Toasts discretos para sucesso/erro
-- **Estados:** Loading skeletons e empty states
-
-## 🔌 Integração com API
-
-O cliente HTTP está configurado em `src/api/client.ts` e oferece:
-
-- Configuração automática de headers
-- Injeção automática do token JWT
-- Tratamento de erros padronizado
-- Suporte a paginação
-- Tipos TypeScript completos
-
-### Exemplo de uso:
-
-```typescript
-import { apiClient } from '@/api/client';
-import { Tenant } from '@/api/types';
-
-const response = await apiClient.get<Tenant[]>('/tenants');
-if (response.data) {
-  // Sucesso
-  console.log(response.data);
-} else if (response.error) {
-  // Erro
-  console.error(response.error.message);
-}
-```
+- **Tipografia:** Sistema de fontes nativo
+- **Espaçamento:** Baseado em múltiplos de 4px
+- **Componentes:** Cards, tabelas, modais bem acabados
+- **Feedback:** Toasts discretos
 
 ## 🐛 Troubleshooting
 
 ### Erro de conexão com a API
 
-Verifique se:
-1. A API está rodando em `http://localhost:4000`
-2. A variável `VITE_API_URL` está configurada corretamente
-3. Não há firewall bloqueando a conexão
+1. Verifique se a API está rodando
+2. Abra o DevTools (F12) e veja o console para a URL detectada
+3. Verifique se não há firewall bloqueando
 
 ### Erro de CORS
 
-Se você estiver acessando de uma rede diferente, certifique-se de que o backend está configurado para aceitar requisições da sua origem.
+Configure o backend para aceitar requisições da origem do frontend:
+```typescript
+// No backend Fastify
+fastify.register(cors, {
+  origin: process.env.CORS_ORIGIN || true,
+  credentials: true,
+});
+```
 
 ### Build falha
 
-Execute:
 ```bash
-rm -rf node_modules pnpm-lock.yaml
-pnpm install
-pnpm build
+rm -rf node_modules package-lock.json
+npm install
+npm run build
+```
+
+### Debug da URL da API
+
+O cliente loga a URL detectada no console em desenvolvimento:
+```
+[API Client] URL detectada: http://localhost:4000
+[API Client] Host atual: localhost
 ```
 
 ## 📝 Licença
