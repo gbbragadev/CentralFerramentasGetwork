@@ -1,5 +1,5 @@
 # ============================================================
-# GetWork Portal API - Dockerfile
+# Central de Ferramentas - Forbiz & GetWork - API
 # ============================================================
 
 FROM node:20-alpine
@@ -7,7 +7,7 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Instalar dependências do sistema
-RUN apk add --no-cache openssl
+RUN apk add --no-cache openssl bash
 
 # Copiar arquivos de dependência
 COPY api/package*.json ./
@@ -28,24 +28,22 @@ COPY api/tsconfig.json ./
 # Copiar seed.ts
 COPY prisma/seed.ts ./prisma/
 
+# Criar script de inicialização
+RUN echo '#!/bin/sh' > /app/start.sh && \
+    echo 'set -e' >> /app/start.sh && \
+    echo '' >> /app/start.sh && \
+    echo 'echo "🔄 Aplicando schema no banco (prisma db push)..."' >> /app/start.sh && \
+    echo 'npx prisma db push --skip-generate' >> /app/start.sh && \
+    echo '' >> /app/start.sh && \
+    echo 'echo "🌱 Executando seed..."' >> /app/start.sh && \
+    echo 'npx tsx prisma/seed.ts || echo "⚠️ Seed falhou ou já executado"' >> /app/start.sh && \
+    echo '' >> /app/start.sh && \
+    echo 'echo "🚀 Iniciando API..."' >> /app/start.sh && \
+    echo 'exec npx tsx src/index.ts' >> /app/start.sh && \
+    chmod +x /app/start.sh
+
 # Expor porta
 EXPOSE 4000
 
-# Script de inicialização
-COPY <<'EOF' /app/start.sh
-#!/bin/sh
-set -e
-
-echo "🔄 Aplicando schema no banco (prisma db push)..."
-npx prisma db push --skip-generate
-
-echo "🌱 Executando seed..."
-npx tsx prisma/seed.ts || echo "⚠️ Seed falhou ou já executado"
-
-echo "🚀 Iniciando API..."
-exec npx tsx src/index.ts
-EOF
-
-RUN chmod +x /app/start.sh
-
-CMD ["/app/start.sh"]
+# Comando de inicialização
+CMD ["/bin/sh", "/app/start.sh"]
