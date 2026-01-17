@@ -12,8 +12,8 @@ RUN apk add --no-cache openssl bash
 # Copiar arquivos de dependência
 COPY api/package*.json ./
 
-# Instalar dependências
-RUN npm install --production && npm cache clean --force
+# Instalar dependências (incluindo devDependencies para tsx)
+RUN npm install && npm cache clean --force
 
 # Copiar Prisma schema da raiz
 COPY prisma ./prisma/
@@ -28,15 +28,9 @@ COPY api/tsconfig.json ./
 # Copiar seed.ts
 COPY prisma/seed.ts ./prisma/
 
-# Criar script de inicialização
+# Criar script de inicialização (SEM prisma db push - tabelas já existem)
 RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'set -e' >> /app/start.sh && \
-    echo '' >> /app/start.sh && \
-    echo 'echo "🔄 Aplicando schema no banco (prisma db push)..."' >> /app/start.sh && \
-    echo 'npx prisma db push --skip-generate' >> /app/start.sh && \
-    echo '' >> /app/start.sh && \
-    echo 'echo "🌱 Executando seed..."' >> /app/start.sh && \
-    echo 'npx tsx prisma/seed.ts || echo "⚠️ Seed falhou ou já executado"' >> /app/start.sh && \
     echo '' >> /app/start.sh && \
     echo 'echo "🚀 Iniciando API..."' >> /app/start.sh && \
     echo 'exec npx tsx src/index.ts' >> /app/start.sh && \

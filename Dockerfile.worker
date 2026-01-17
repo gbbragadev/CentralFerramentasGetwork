@@ -1,5 +1,5 @@
 # ============================================================
-# GetWork Portal Worker - Dockerfile
+# Central de Ferramentas - Forbiz & GetWork - Worker
 # ============================================================
 
 FROM node:20-alpine
@@ -7,13 +7,13 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Instalar dependências do sistema
-RUN apk add --no-cache openssl
+RUN apk add --no-cache openssl bash
 
 # Copiar arquivos de dependência
 COPY api/package*.json ./
 
-# Instalar dependências
-RUN npm install --production && npm cache clean --force
+# Instalar dependências (incluindo devDependencies para tsx)
+RUN npm install && npm cache clean --force
 
 # Copiar Prisma schema da raiz
 COPY prisma ./prisma/
