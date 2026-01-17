@@ -35,6 +35,7 @@ export function TenantDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string; tokenPreview?: string } | null>(null);
   
   // Dados
   const [tenant, setTenant] = useState<Tenant | null>(null);
@@ -174,18 +175,61 @@ export function TenantDetailPage() {
     }
   };
 
-  // Testar conexão Senior
+  // Testar conexão Senior (pode testar antes de salvar)
   const handleTestConnection = async () => {
+    // Validar campos antes de testar
+    if (!seniorForm.seniorTenant.trim()) {
+      toast.error('Informe o Tenant Senior X');
+      return;
+    }
+    if (!seniorForm.username.trim()) {
+      toast.error('Informe o Usuário');
+      return;
+    }
+    // Se não tem credenciais salvas, precisa da senha
+    if (!seniorCredentials && !seniorForm.password.trim()) {
+      toast.error('Informe a Senha');
+      return;
+    }
+
     setTesting(true);
-    const response = await apiClient.post<TestConnectionResult>(`/tenants/${tenantId}/test-senior-connection`);
+    setTestResult(null);
+
+    // Testar com os dados do formulário (não precisa ter salvo)
+    const response = await apiClient.post<TestConnectionResult>(
+      `/tenants/${tenantId}/test-senior-connection`,
+      {
+        seniorTenant: seniorForm.seniorTenant,
+        username: seniorForm.username,
+        password: seniorForm.password || undefined, // Usa senha do form ou a já salva
+        environment: seniorForm.environment,
+        baseUrl: seniorForm.baseUrl,
+      }
+    );
     setTesting(false);
 
     if (response.error) {
+      setTestResult({
+        success: false,
+        message: response.error.message || 'Falha na conexão',
+      });
       toast.error(response.error.message || 'Falha na conexão');
     } else if (response.data?.success) {
-      toast.success('Conexão bem-sucedida!');
-      loadTenant();
+      setTestResult({
+        success: true,
+        message: response.data.message || 'Login realizado com sucesso!',
+        tokenPreview: response.data.tokenPreview,
+      });
+      toast.success('Login realizado com sucesso!');
+      // Se o teste passou, recarrega para atualizar status
+      if (seniorCredentials) {
+        loadTenant();
+      }
     } else {
+      setTestResult({
+        success: false,
+        message: response.data?.message || 'Falha na conexão',
+      });
       toast.error(response.data?.message || 'Falha na conexão');
     }
   };
@@ -451,15 +495,52 @@ export function TenantDetailPage() {
                 />
               </div>
 
+              {/* Resultado do Teste */}
+              {testResult && (
+                <div className={cn(
+                  "rounded-lg p-4 flex items-start gap-3",
+                  testResult.success 
+                    ? "bg-green-50 border border-green-200" 
+                    : "bg-red-50 border border-red-200"
+                )}>
+                  {testResult.success ? (
+                    <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                  ) : (
+                    <XCircle className="h-5 w-5 text-red-500 mt-0.5" />
+                  )}
+                  <div className="flex-1">
+                    <p className={cn(
+                      "font-medium",
+                      testResult.success ? "text-green-700" : "text-red-700"
+                    )}>
+                      {testResult.success ? 'Login realizado com sucesso!' : 'Falha no login'}
+                    </p>
+                    <p className={cn(
+                      "text-sm mt-1",
+                      testResult.success ? "text-green-600" : "text-red-600"
+                    )}>
+                      {testResult.message}
+                    </p>
+                    {testResult.tokenPreview && (
+                      <div className="mt-2 bg-white/50 rounded p-2">
+                        <p className="text-xs text-slate-500">Preview do Token:</p>
+                        <code className="text-xs text-green-700 font-mono break-all">
+                          {testResult.tokenPreview}...
+                        </code>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-between pt-4 border-t">
                 <Button 
                   variant="secondary" 
                   onClick={handleTestConnection} 
                   loading={testing}
-                  disabled={!seniorCredentials}
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
-                  Testar Conexão
+                  Testar Login
                 </Button>
                 <Button onClick={handleSaveSenior} loading={saving}>
                   <Save className="h-4 w-4 mr-2" />

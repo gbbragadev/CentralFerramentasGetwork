@@ -126,6 +126,7 @@ export interface TestConnectionResult {
   success: boolean;
   message: string;
   tokenExpiresAt?: string;
+  tokenPreview?: string;  // Primeiros caracteres do token para validação visual
 }
 
 // ============================================================================
