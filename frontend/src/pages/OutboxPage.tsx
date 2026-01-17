@@ -85,6 +85,7 @@ export function OutboxPage() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'pending':
+      case 'queued':
         return <Clock className="h-4 w-4" />;
       case 'sent':
         return <Send className="h-4 w-4" />;
@@ -130,9 +131,9 @@ export function OutboxPage() {
             <Phone className="h-4 w-4 text-green-600" />
           </div>
           <div>
-            <div className="font-medium text-slate-900 text-sm">{formatPhone(row.to)}</div>
+            <div className="font-medium text-slate-900 text-sm">{formatPhone(row.recipientPhone)}</div>
             <div className="text-xs text-slate-500">
-              {tenants.find((t) => t.id === row.tenantId)?.name || 'Tenant desconhecido'}
+              {row.recipientName || tenants.find((t) => t.id === row.tenantId)?.name || 'Tenant desconhecido'}
             </div>
           </div>
         </div>
@@ -154,12 +155,12 @@ export function OutboxPage() {
       header: 'Provider',
       accessor: (row: OutboxMessage) => (
         <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded ${
-          row.providerType === 'MOCK_WHATSAPP' 
+          row.provider === 'mock' 
             ? 'bg-orange-50 text-orange-700' 
             : 'bg-green-50 text-green-700'
         }`}>
           <MessageSquare className="h-3 w-3 mr-1" />
-          {row.providerType === 'MOCK_WHATSAPP' ? 'Mock' : 'Meta'}
+          {row.provider === 'mock' ? 'Mock' : 'Meta'}
         </span>
       ),
     },
@@ -175,7 +176,7 @@ export function OutboxPage() {
           >
             <Eye className="h-4 w-4" />
           </Button>
-          {row.providerType === 'MOCK_WHATSAPP' && row.status !== 'failed' && (
+          {row.provider === 'mock' && row.status !== 'failed' && (
             <Button 
               size="sm" 
               variant="ghost" 
@@ -201,9 +202,9 @@ export function OutboxPage() {
               <select
                 value={filterTenantId}
                 onChange={(e) => setFilterTenantId(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
               >
-                <option value="">Todos os tenants</option>
+                <option value="">Todos</option>
                 {tenants.map((tenant) => (
                   <option key={tenant.id} value={tenant.id}>
                     {tenant.name}
@@ -216,10 +217,11 @@ export function OutboxPage() {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
               >
-                <option value="">Todos os status</option>
+                <option value="">Todos</option>
                 <option value="pending">Pendente</option>
+                <option value="queued">Na fila</option>
                 <option value="sent">Enviado</option>
                 <option value="delivered">Entregue</option>
                 <option value="read">Lido</option>
@@ -227,12 +229,7 @@ export function OutboxPage() {
               </select>
             </div>
             <div className="flex items-end">
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                onClick={loadMessages}
-                title="Atualizar lista"
-              >
+              <Button variant="secondary" onClick={loadMessages}>
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Atualizar
               </Button>
@@ -241,75 +238,59 @@ export function OutboxPage() {
         </div>
 
         {/* Table */}
-        <Table 
-          columns={columns} 
-          data={messages} 
+        <Table
+          columns={columns}
+          data={messages}
           loading={loading}
           emptyMessage="Nenhuma mensagem encontrada"
         />
       </div>
 
       {/* Detail Modal */}
-      <Modal 
-        isOpen={isDetailModalOpen} 
-        onClose={() => setIsDetailModalOpen(false)} 
+      <Modal
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
         title="Detalhes da Mensagem"
+        size="lg"
       >
         {selectedMessage && (
           <div className="space-y-4">
-            {/* Status Badge */}
-            <div className="flex items-center justify-between">
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full ${
-                statusColors[selectedMessage.status]?.bg || 'bg-slate-50'
-              } ${statusColors[selectedMessage.status]?.text || 'text-slate-700'}`}>
-                {getStatusIcon(selectedMessage.status)}
-                {statusLabels[selectedMessage.status] || selectedMessage.status}
-              </span>
-              <span className="text-xs text-slate-500">
-                {new Date(selectedMessage.createdAt).toLocaleString('pt-BR')}
-              </span>
-            </div>
-
-            {/* Recipient */}
-            <div className="bg-slate-50 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                  <Phone className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <div className="font-medium text-slate-900">{formatPhone(selectedMessage.to)}</div>
-                  <div className="text-sm text-slate-500">
-                    {tenants.find((t) => t.id === selectedMessage.tenantId)?.name}
-                  </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-medium text-slate-500">Destinatário</label>
+                <p className="text-sm font-medium text-slate-900">{formatPhone(selectedMessage.recipientPhone)}</p>
+                {selectedMessage.recipientName && (
+                  <p className="text-xs text-slate-500">{selectedMessage.recipientName}</p>
+                )}
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-500">Status</label>
+                <div className="mt-1">
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${statusColors[selectedMessage.status]?.bg} ${statusColors[selectedMessage.status]?.text}`}>
+                    {getStatusIcon(selectedMessage.status)}
+                    {statusLabels[selectedMessage.status]}
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Message Content */}
             <div>
-              <h3 className="text-sm font-medium text-slate-700 mb-2">Conteúdo da Mensagem</h3>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <p className="text-slate-900 whitespace-pre-wrap text-sm">{selectedMessage.text}</p>
+              <label className="text-xs font-medium text-slate-500">Mensagem</label>
+              <div className="mt-1 p-3 bg-slate-50 rounded-lg text-sm whitespace-pre-wrap">
+                {selectedMessage.messageContent || 'Sem conteúdo'}
               </div>
             </div>
 
-            {/* Error */}
-            {selectedMessage.error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <h3 className="text-sm font-medium text-red-800">Erro</h3>
-                    <p className="text-sm text-red-700 mt-1">{selectedMessage.error}</p>
-                  </div>
-                </div>
+            {selectedMessage.errorMessage && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <label className="text-xs font-medium text-red-700">Erro</label>
+                <p className="text-sm text-red-600 mt-1">{selectedMessage.errorMessage}</p>
               </div>
             )}
 
             {/* Metadata */}
-            <div>
+            <div className="border-t pt-4">
               <button
-                type="button"
                 onClick={() => setMetaExpanded(!metaExpanded)}
                 className="flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-slate-900"
               >
@@ -317,8 +298,22 @@ export function OutboxPage() {
                 Metadados
               </button>
               {metaExpanded && (
-                <pre className="mt-2 text-xs bg-slate-50 border border-slate-200 p-3 rounded-lg overflow-auto max-h-64">
-                  {JSON.stringify(selectedMessage.meta, null, 2)}
+                <pre className="mt-2 p-3 bg-slate-100 rounded-lg text-xs overflow-auto max-h-48">
+                  {JSON.stringify({
+                    id: selectedMessage.id,
+                    jobId: selectedMessage.jobId,
+                    templateName: selectedMessage.templateName,
+                    templateParams: selectedMessage.templateParams,
+                    seniorDocumentId: selectedMessage.seniorDocumentId,
+                    seniorEnvelopeId: selectedMessage.seniorEnvelopeId,
+                    externalMessageId: selectedMessage.externalMessageId,
+                    idempotencyKey: selectedMessage.idempotencyKey,
+                    queuedAt: selectedMessage.queuedAt,
+                    sentAt: selectedMessage.sentAt,
+                    deliveredAt: selectedMessage.deliveredAt,
+                    readAt: selectedMessage.readAt,
+                    failedAt: selectedMessage.failedAt,
+                  }, null, 2)}
                 </pre>
               )}
             </div>
@@ -326,47 +321,48 @@ export function OutboxPage() {
         )}
       </Modal>
 
-      {/* Simulate Status Modal */}
-      <Modal 
-        isOpen={isStatusModalOpen} 
-        onClose={() => setIsStatusModalOpen(false)} 
-        title="Simular Status"
+      {/* Status Simulation Modal */}
+      <Modal
+        isOpen={isStatusModalOpen}
+        onClose={() => setIsStatusModalOpen(false)}
+        title="Simular Status (Mock)"
       >
         <form onSubmit={handleSubmitStatus} className="space-y-4">
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm text-orange-800">
-            <strong>Modo Mock:</strong> Simule a mudança de status da mensagem para testar o fluxo.
-          </div>
+          <p className="text-sm text-slate-600">
+            Simule uma mudança de status para esta mensagem. Isso só funciona para mensagens enviadas via Mock.
+          </p>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">Novo Status</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="space-y-2">
               {(['delivered', 'read', 'failed'] as const).map((status) => (
-                <button
-                  key={status}
-                  type="button"
-                  onClick={() => setStatusToSimulate(status)}
-                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-colors ${
-                    statusToSimulate === status
-                      ? 'border-primary bg-primary/5 text-primary'
-                      : 'border-slate-200 hover:border-slate-300'
-                  }`}
-                >
-                  {getStatusIcon(status)}
-                  <span className="text-sm font-medium">{statusLabels[status]}</span>
-                </button>
+                <label key={status} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="status"
+                    value={status}
+                    checked={statusToSimulate === status}
+                    onChange={() => setStatusToSimulate(status)}
+                    className="h-4 w-4 text-primary focus:ring-primary border-slate-300"
+                  />
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${statusColors[status]?.bg} ${statusColors[status]?.text}`}>
+                    {getStatusIcon(status)}
+                    {statusLabels[status]}
+                  </span>
+                </label>
               ))}
             </div>
           </div>
 
           {statusToSimulate === 'failed' && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Mensagem de Erro</label>
-              <textarea
+              <label className="block text-sm font-medium text-slate-700 mb-1">Mensagem de Erro</label>
+              <input
+                type="text"
                 value={errorMessage}
                 onChange={(e) => setErrorMessage(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                rows={3}
-                placeholder="Descreva o erro simulado (opcional)"
+                placeholder="Ex: Número inválido"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
               />
             </div>
           )}
@@ -376,7 +372,7 @@ export function OutboxPage() {
               Cancelar
             </Button>
             <Button type="submit" loading={submitting}>
-              Simular Status
+              Simular
             </Button>
           </div>
         </form>

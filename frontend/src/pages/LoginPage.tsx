@@ -1,7 +1,7 @@
 import { useState, FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
-import { Building2, Loader2, AlertCircle, Lock, Mail } from 'lucide-react';
+import { Building2, Loader2, AlertCircle, Lock, Mail, CheckCircle } from 'lucide-react';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -46,19 +46,35 @@ export function LoginPage() {
             Gerencie suas integrações com Senior X
           </h2>
           
-          <p className="text-white/70 leading-relaxed">
-            Plataforma centralizada para gerenciamento de tenants, regras de notificação, 
-            agendamentos e monitoramento de mensagens WhatsApp.
+          <p className="text-white/70 leading-relaxed mb-8">
+            Plataforma centralizada para gerenciamento de tenants, notificações WhatsApp, 
+            e integração com GED, Sign e HCM.
           </p>
           
-          <div className="mt-12 grid grid-cols-2 gap-4">
-            <div className="bg-white/10 rounded-lg p-4">
-              <p className="text-2xl font-bold">Multi-tenant</p>
-              <p className="text-sm text-white/70">Gerencie múltiplos clientes</p>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 text-white/90">
+              <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center">
+                <CheckCircle className="h-4 w-4" />
+              </div>
+              <span>Notificações WhatsApp automatizadas</span>
             </div>
-            <div className="bg-white/10 rounded-lg p-4">
-              <p className="text-2xl font-bold">Automação</p>
-              <p className="text-sm text-white/70">Regras e agendamentos</p>
+            <div className="flex items-center gap-3 text-white/90">
+              <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center">
+                <CheckCircle className="h-4 w-4" />
+              </div>
+              <span>Integração com GED e Sign</span>
+            </div>
+            <div className="flex items-center gap-3 text-white/90">
+              <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center">
+                <CheckCircle className="h-4 w-4" />
+              </div>
+              <span>Extensão para Cercas Virtuais</span>
+            </div>
+            <div className="flex items-center gap-3 text-white/90">
+              <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center">
+                <CheckCircle className="h-4 w-4" />
+              </div>
+              <span>Multi-tenant com isolamento</span>
             </div>
           </div>
         </div>
@@ -104,9 +120,17 @@ export function LoginPage() {
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1.5">
-                  Senha
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label htmlFor="password" className="block text-sm font-medium text-slate-700">
+                    Senha
+                  </label>
+                  <Link 
+                    to="/forgot-password" 
+                    className="text-sm text-primary hover:text-primary/80 font-medium"
+                  >
+                    Esqueceu a senha?
+                  </Link>
+                </div>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                   <input
@@ -143,6 +167,18 @@ export function LoginPage() {
                 )}
               </button>
             </form>
+
+            <div className="mt-6 text-center">
+              <p className="text-sm text-slate-600">
+                Não tem uma conta?{' '}
+                <Link 
+                  to="/register" 
+                  className="text-primary hover:text-primary/80 font-medium"
+                >
+                  Criar conta
+                </Link>
+              </p>
+            </div>
           </div>
 
           <p className="text-center text-sm text-slate-500 mt-8">

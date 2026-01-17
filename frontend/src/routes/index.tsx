@@ -1,25 +1,54 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from '@/auth/ProtectedRoute';
+
+// Auth pages
 import { LoginPage } from '@/pages/LoginPage';
+import { RegisterPage } from '@/pages/RegisterPage';
+import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
+import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
+
+// Main pages
 import { TenantsPage } from '@/pages/TenantsPage';
 import { TenantProductsPage } from '@/pages/TenantProductsPage';
+import { TenantDetailPage } from '@/pages/TenantDetailPage';
 import { ProductsPage } from '@/pages/ProductsPage';
-import { RulesPage } from '@/pages/RulesPage';
-import { SchedulesPage } from '@/pages/SchedulesPage';
+
+// WhatsApp pages (nova estrutura)
+import { SourcesPage } from '@/pages/SourcesPage';
+import { TemplatesPage } from '@/pages/TemplatesPage';
+import { JobsPage } from '@/pages/JobsPage';
+
+// Monitoring pages
 import { OutboxPage } from '@/pages/OutboxPage';
 import { LogsPage } from '@/pages/LogsPage';
+
+// Support pages
 import { DocsPage } from '@/pages/DocsPage';
 
 export function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Auth routes (public) */}
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+        {/* Gestão */}
         <Route
           path="/tenants"
           element={
             <ProtectedRoute>
               <TenantsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tenants/:tenantId"
+          element={
+            <ProtectedRoute>
+              <TenantDetailPage />
             </ProtectedRoute>
           }
         />
@@ -39,22 +68,34 @@ export function AppRoutes() {
             </ProtectedRoute>
           }
         />
+
+        {/* Automação WhatsApp */}
         <Route
-          path="/rules"
+          path="/sources"
           element={
             <ProtectedRoute>
-              <RulesPage />
+              <SourcesPage />
             </ProtectedRoute>
           }
         />
         <Route
-          path="/schedules"
+          path="/templates"
           element={
             <ProtectedRoute>
-              <SchedulesPage />
+              <TemplatesPage />
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/jobs"
+          element={
+            <ProtectedRoute>
+              <JobsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Monitoramento */}
         <Route
           path="/outbox"
           element={
@@ -71,6 +112,8 @@ export function AppRoutes() {
             </ProtectedRoute>
           }
         />
+
+        {/* Suporte */}
         <Route
           path="/docs"
           element={
@@ -79,6 +122,8 @@ export function AppRoutes() {
             </ProtectedRoute>
           }
         />
+
+        {/* Default redirect */}
         <Route path="/" element={<Navigate to="/tenants" replace />} />
       </Routes>
     </BrowserRouter>

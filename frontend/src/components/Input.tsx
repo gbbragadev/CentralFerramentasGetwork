@@ -6,12 +6,14 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
   hint?: string;
+  icon?: ReactNode;      // alias for leftIcon
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, hint, leftIcon, rightIcon, className, required, disabled, ...props }, ref) => {
+  ({ label, error, hint, icon, leftIcon, rightIcon, className, required, disabled, ...props }, ref) => {
+    const iconLeft = icon || leftIcon;
     return (
       <div className="space-y-1.5">
         {label && (
@@ -21,9 +23,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           </label>
         )}
         <div className="relative">
-          {leftIcon && (
+          {iconLeft && (
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-              {leftIcon}
+              {iconLeft}
             </div>
           )}
           <input
@@ -36,7 +38,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               error 
                 ? 'border-red-300 focus:ring-red-200 focus:border-red-500' 
                 : 'border-slate-300',
-              leftIcon ? 'pl-10' : 'px-3',
+              iconLeft ? 'pl-10' : 'px-3',
               rightIcon ? 'pr-10' : 'px-3',
               className
             )}

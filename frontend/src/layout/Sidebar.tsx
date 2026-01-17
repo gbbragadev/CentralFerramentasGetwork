@@ -1,5 +1,8 @@
 import { NavLink } from 'react-router-dom';
-import { Building2, Users, FileText, Calendar, Send, FileCheck, Package, Book } from 'lucide-react';
+import { 
+  Building2, Users, Package, Database, MessageSquareText, 
+  Zap, Send, FileCheck, Book 
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navSections = [
@@ -11,10 +14,11 @@ const navSections = [
     ],
   },
   {
-    title: 'Automação',
+    title: 'Automação WhatsApp',
     items: [
-      { to: '/rules', icon: FileText, label: 'Regras' },
-      { to: '/schedules', icon: Calendar, label: 'Agendamentos' },
+      { to: '/sources', icon: Database, label: 'Fontes de Dados' },
+      { to: '/templates', icon: MessageSquareText, label: 'Templates' },
+      { to: '/jobs', icon: Zap, label: 'Jobs' },
     ],
   },
   {
