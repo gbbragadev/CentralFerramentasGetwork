@@ -1,0 +1,32 @@
+.
+├── README.md
+├── estrutura.txt
+└── frontend
+    ├── README.md
+    ├── eslint.config.js
+    ├── index.html
+    ├── package.json
+    ├── pnpm-lock.yaml
+    ├── postcss.config.js
+    ├── public
+    ├── src
+    │   ├── App.tsx
+    │   ├── api
+    │   ├── auth
+    │   ├── components
+    │   ├── index.css
+    │   ├── layout
+    │   ├── lib
+    │   ├── main.tsx
+    │   ├── pages
+    │   ├── routes
+    │   └── vite-env.d.ts
+    ├── tailwind.config.js
+    ├── tsconfig.app.json
+    ├── tsconfig.app.tsbuildinfo
+    ├── tsconfig.json
+    ├── tsconfig.node.json
+    ├── tsconfig.node.tsbuildinfo
+    └── vite.config.ts
+
+10 directories, 19 files

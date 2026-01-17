@@ -1,0 +1,51 @@
+# ============================================================
+# GetWork Portal API - Dockerfile
+# ============================================================
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Instalar dependências do sistema
+RUN apk add --no-cache openssl
+
+# Copiar arquivos de dependência
+COPY api/package*.json ./
+
+# Instalar dependências
+RUN npm ci --only=production && npm cache clean --force
+
+# Copiar Prisma schema da raiz
+COPY prisma ./prisma/
+
+# Gerar Prisma Client
+RUN npx prisma generate
+
+# Copiar código fonte da API
+COPY api/src ./src/
+COPY api/tsconfig.json ./
+
+# Copiar seed.ts
+COPY prisma/seed.ts ./prisma/
+
+# Expor porta
+EXPOSE 4000
+
+# Script de inicialização
+COPY <<'EOF' /app/start.sh
+#!/bin/sh
+set -e
+
+echo "🔄 Aplicando schema no banco (prisma db push)..."
+npx prisma db push --skip-generate
+
+echo "🌱 Executando seed..."
+npx tsx prisma/seed.ts || echo "⚠️ Seed falhou ou já executado"
+
+echo "🚀 Iniciando API..."
+exec npx tsx src/index.ts
+EOF
+
+RUN chmod +x /app/start.sh
+
+CMD ["/app/start.sh"]

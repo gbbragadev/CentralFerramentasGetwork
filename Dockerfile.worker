@@ -1,0 +1,29 @@
+# ============================================================
+# GetWork Portal Worker - Dockerfile
+# ============================================================
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Instalar dependências do sistema
+RUN apk add --no-cache openssl
+
+# Copiar arquivos de dependência
+COPY api/package*.json ./
+
+# Instalar dependências
+RUN npm ci --only=production && npm cache clean --force
+
+# Copiar Prisma schema da raiz
+COPY prisma ./prisma/
+
+# Gerar Prisma Client
+RUN npx prisma generate
+
+# Copiar código fonte da API (worker usa mesmos módulos)
+COPY api/src ./src/
+COPY api/tsconfig.json ./
+
+# Iniciar worker
+CMD ["npx", "tsx", "src/worker.ts"]

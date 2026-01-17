@@ -1,0 +1,242 @@
+// ============================================================
+// GetWork Portal - Prisma Schema (Supabase)
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// --- Usuários do sistema (admin interno) ---
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      UserRole @default(ADMIN)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  VIEWER
+}
+
+// --- Tenants (clientes do SaaS) ---
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  active    Boolean  @default(true)
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  seniorCredentials    SeniorCredentials?
+  notificationChannels NotificationChannel[]
+  rules                Rule[]
+  schedules            Schedule[]
+  outboxMessages       OutboxMessage[]
+  deliveryLogs         DeliveryLog[]
+  idempotencyKeys      IdempotencyKey[]
+
+  @@map("tenants")
+}
+
+// --- Credenciais do Senior X por tenant ---
+model SeniorCredentials {
+  id        String  @id @default(uuid())
+  tenantId  String  @unique @map("tenant_id")
+  baseUrl   String  @map("base_url")
+  authToken String  @map("auth_token")
+  demoMode  Boolean @default(true) @map("demo_mode")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("senior_credentials")
+}
+
+// --- Canais de notificação por tenant ---
+model NotificationChannel {
+  id       String      @id @default(uuid())
+  tenantId String      @map("tenant_id")
+  type     ChannelType
+  enabled  Boolean     @default(true)
+  config   Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rules  Rule[]
+
+  @@unique([tenantId, type])
+  @@map("notification_channels")
+}
+
+enum ChannelType {
+  MOCK_WHATSAPP
+  META_WHATSAPP
+  EMAIL
+  SMS
+}
+
+// --- Regras de notificação ---
+model Rule {
+  id          String  @id @default(uuid())
+  tenantId    String  @map("tenant_id")
+  channelId   String? @map("channel_id")
+  name        String
+  description String?
+  enabled     Boolean @default(true)
+
+  seniorEndpointPath String? @map("senior_endpoint_path")
+  pollStrategy       String  @default("SIMPLE") @map("poll_strategy")
+
+  messageTemplate   String @map("message_template")
+  recipientStrategy String @default("FIELD") @map("recipient_strategy")
+  recipientField    String? @map("recipient_field")
+  recipientStatic   String? @map("recipient_static")
+
+  metadata Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant         Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  channel        NotificationChannel? @relation(fields: [channelId], references: [id])
+  schedules      ScheduleRule[]
+  outboxMessages OutboxMessage[]
+  deliveryLogs   DeliveryLog[]
+
+  @@map("rules")
+}
+
+// --- Agendamentos ---
+model Schedule {
+  id        String    @id @default(uuid())
+  tenantId  String    @map("tenant_id")
+  name      String
+  enabled   Boolean   @default(true)
+  cron      String
+  timezone  String    @default("America/Sao_Paulo")
+  lastRunAt DateTime? @map("last_run_at")
+  nextRunAt DateTime? @map("next_run_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rules  ScheduleRule[]
+
+  @@map("schedules")
+}
+
+// --- Relação N:N entre Schedule e Rule ---
+model ScheduleRule {
+  scheduleId String @map("schedule_id")
+  ruleId     String @map("rule_id")
+
+  schedule Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  rule     Rule     @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@id([scheduleId, ruleId])
+  @@map("schedule_rules")
+}
+
+// --- Outbox de mensagens ---
+model OutboxMessage {
+  id           String        @id @default(uuid())
+  tenantId     String        @map("tenant_id")
+  ruleId       String?       @map("rule_id")
+  to           String
+  text         String
+  status       MessageStatus @default(QUEUED)
+  providerType ChannelType   @map("provider_type")
+
+  eventId      String? @map("event_id")
+  metadata     Json?
+  externalId   String? @map("external_id")
+
+  sentAt       DateTime? @map("sent_at")
+  deliveredAt  DateTime? @map("delivered_at")
+  readAt       DateTime? @map("read_at")
+  failedAt     DateTime? @map("failed_at")
+  errorMessage String?   @map("error_message")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rule         Rule?         @relation(fields: [ruleId], references: [id])
+  deliveryLogs DeliveryLog[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@map("outbox_messages")
+}
+
+enum MessageStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+// --- Logs de entrega ---
+model DeliveryLog {
+  id       String    @id @default(uuid())
+  tenantId String    @map("tenant_id")
+  ruleId   String?   @map("rule_id")
+  outboxId String?   @map("outbox_id")
+  status   LogStatus
+  message  String?
+  error    String?
+  attempts Int       @default(1)
+  metadata Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rule   Rule?          @relation(fields: [ruleId], references: [id])
+  outbox OutboxMessage? @relation(fields: [outboxId], references: [id])
+
+  @@index([tenantId, createdAt])
+  @@index([status])
+  @@map("delivery_logs")
+}
+
+enum LogStatus {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+}
+
+// --- Chaves de idempotência ---
+model IdempotencyKey {
+  id          String   @id @default(uuid())
+  tenantId    String   @map("tenant_id")
+  key         String   @unique
+  processedAt DateTime @default(now()) @map("processed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("idempotency_keys")
+}

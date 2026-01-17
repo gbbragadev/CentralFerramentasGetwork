@@ -1,0 +1,76 @@
+# ============================================================
+# Central de Ferramentas - Forbiz & GetWork
+# ============================================================
+# - Banco de dados: Supabase (externo)
+# - Redis: local (cache + filas BullMQ)
+# - API: Fastify + Prisma
+# - Worker: BullMQ + Cron
+# ============================================================
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: forbiz-getwork-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - forbiz-getwork-network
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: forbiz-getwork-api
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: ${DATABASE_URL}
+      DIRECT_URL: ${DIRECT_URL}
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@getwork.com.br}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin123!}
+      PORT: 4000
+      HOST: 0.0.0.0
+    ports:
+      - "4000:4000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - forbiz-getwork-network
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: forbiz-getwork-worker
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: ${DATABASE_URL}
+      DIRECT_URL: ${DIRECT_URL}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_started
+    networks:
+      - forbiz-getwork-network
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+
+networks:
+  forbiz-getwork-network:
+    driver: bridge
