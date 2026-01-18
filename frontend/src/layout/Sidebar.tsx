@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { 
-  Building2, Users, Package, Database, MessageSquareText, 
+  Users, Package, Database, MessageSquareText, 
   Zap, Send, FileCheck, Book 
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -39,16 +39,13 @@ const navSections = [
 export function Sidebar() {
   return (
     <aside className="w-64 bg-slate-900 text-white flex flex-col h-screen fixed left-0 top-0">
-      <div className="p-6 border-b border-slate-800">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center">
-            <Building2 className="h-6 w-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold">Forbiz & GetWork</h1>
-            <p className="text-xs text-slate-400">Central de Ferramentas</p>
-          </div>
-        </div>
+      {/* Logo */}
+      <div className="p-4 border-b border-slate-800">
+        <img 
+          src="/logo-combined.png" 
+          alt="Forbiz & GetWork" 
+          className="h-12 w-auto mx-auto"
+        />
       </div>
 
       <nav className="flex-1 p-4 space-y-6 overflow-y-auto">

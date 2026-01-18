@@ -82,9 +82,9 @@ export function TenantDetailPage() {
       setTenant(tenantRes.data);
       setTenantForm({
         name: tenantRes.data.name,
-        domain: tenantRes.data.domain,
+        domain: tenantRes.data.slug || tenantRes.data.domain || '',
         displayName: tenantRes.data.displayName || '',
-        isActive: tenantRes.data.isActive,
+        isActive: tenantRes.data.active ?? tenantRes.data.isActive ?? true,
       });
     }
     

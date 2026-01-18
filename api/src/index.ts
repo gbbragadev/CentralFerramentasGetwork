@@ -16,6 +16,7 @@ import { schedulesRoutes } from './routes/schedules.js';
 import { outboxRoutes } from './routes/outbox.js';
 import { logsRoutes } from './routes/logs.js';
 import { mockRoutes } from './routes/mock.js';
+import { productsRoutes } from './routes/products.js';
 
 // Lib
 import { ErrorCodes, apiError, validationError } from './lib/response.js';
@@ -54,6 +55,26 @@ app.decorate('authenticate', async function (request: any, reply: any) {
   }
 });
 
+// Rota raiz
+app.get('/', async () => {
+  return {
+    name: 'GetWork Portal API',
+    version: '1.0.0',
+    status: 'running',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      health: '/health',
+      auth: '/auth',
+      tenants: '/tenants',
+      products: '/products',
+      rules: '/rules',
+      schedules: '/schedules',
+      outbox: '/outbox',
+      logs: '/logs',
+    },
+  };
+});
+
 // Health check
 app.get('/health', async () => {
   // Testar conexão com banco
@@ -81,6 +102,7 @@ await app.register(schedulesRoutes, { prefix: '/schedules' });
 await app.register(outboxRoutes, { prefix: '/outbox' });
 await app.register(logsRoutes, { prefix: '/logs' });
 await app.register(mockRoutes, { prefix: '/mock' });
+await app.register(productsRoutes, { prefix: '/products' });
 
 // Error handler global
 app.setErrorHandler((error, request, reply) => {

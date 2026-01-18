@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { apiClient } from '@/api/client';
-import { Building2, Mail, Lock, User, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Mail, Lock, User, ArrowLeft, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function RegisterPage() {
@@ -82,14 +82,12 @@ export function RegisterPage() {
       {/* Left side - Branding */}
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-center items-center p-12 text-white">
         <div className="max-w-md">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="h-14 w-14 rounded-xl bg-primary/20 flex items-center justify-center">
-              <Building2 className="h-8 w-8 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold">Forbiz & GetWork</h1>
-              <p className="text-slate-400">Central de Ferramentas</p>
-            </div>
+          <div className="mb-8">
+            <img 
+              src="/logo-combined.png" 
+              alt="Forbiz & GetWork" 
+              className="h-14 w-auto"
+            />
           </div>
           
           <h2 className="text-4xl font-bold mb-4">
@@ -128,14 +126,12 @@ export function RegisterPage() {
         <div className="w-full max-w-md">
           <div className="bg-white rounded-2xl shadow-2xl p-8">
             {/* Mobile branding */}
-            <div className="lg:hidden flex items-center gap-3 mb-6">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Building2 className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-lg font-bold text-slate-900">Forbiz & GetWork</h1>
-                <p className="text-xs text-slate-500">Central de Ferramentas</p>
-              </div>
+            <div className="lg:hidden flex items-center justify-center mb-6">
+              <img 
+                src="/logo-combined.png" 
+                alt="Forbiz & GetWork" 
+                className="h-10 w-auto"
+              />
             </div>
 
             <div className="mb-6">

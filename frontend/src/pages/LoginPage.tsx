@@ -1,7 +1,7 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
-import { Building2, Loader2, AlertCircle, Lock, Mail, CheckCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Lock, Mail, CheckCircle } from 'lucide-react';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -30,16 +30,15 @@ export function LoginPage() {
   return (
     <div className="min-h-screen bg-slate-900 flex">
       {/* Left Panel - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary/90 to-primary items-center justify-center p-12">
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-800 to-slate-900 items-center justify-center p-12">
         <div className="max-w-md text-white">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="h-16 w-16 rounded-xl bg-white/20 flex items-center justify-center">
-              <Building2 className="h-10 w-10 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold">Forbiz & GetWork</h1>
-              <p className="text-white/80">Central de Ferramentas</p>
-            </div>
+          {/* Logo */}
+          <div className="mb-8">
+            <img 
+              src="/logo-combined.png" 
+              alt="Forbiz & GetWork" 
+              className="h-16 w-auto"
+            />
           </div>
           
           <h2 className="text-2xl font-semibold mb-4">
@@ -53,26 +52,26 @@ export function LoginPage() {
           
           <div className="space-y-3">
             <div className="flex items-center gap-3 text-white/90">
-              <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center">
-                <CheckCircle className="h-4 w-4" />
+              <div className="h-8 w-8 rounded-full bg-primary/30 flex items-center justify-center">
+                <CheckCircle className="h-4 w-4 text-primary" />
               </div>
               <span>Notificações WhatsApp automatizadas</span>
             </div>
             <div className="flex items-center gap-3 text-white/90">
-              <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center">
-                <CheckCircle className="h-4 w-4" />
+              <div className="h-8 w-8 rounded-full bg-primary/30 flex items-center justify-center">
+                <CheckCircle className="h-4 w-4 text-primary" />
               </div>
               <span>Integração com GED e Sign</span>
             </div>
             <div className="flex items-center gap-3 text-white/90">
-              <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center">
-                <CheckCircle className="h-4 w-4" />
+              <div className="h-8 w-8 rounded-full bg-primary/30 flex items-center justify-center">
+                <CheckCircle className="h-4 w-4 text-primary" />
               </div>
               <span>Extensão para Cercas Virtuais</span>
             </div>
             <div className="flex items-center gap-3 text-white/90">
-              <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center">
-                <CheckCircle className="h-4 w-4" />
+              <div className="h-8 w-8 rounded-full bg-primary/30 flex items-center justify-center">
+                <CheckCircle className="h-4 w-4 text-primary" />
               </div>
               <span>Multi-tenant com isolamento</span>
             </div>
@@ -85,13 +84,11 @@ export function LoginPage() {
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center mb-8">
-            <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center mr-3">
-              <Building2 className="h-7 w-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-white">Forbiz & GetWork</h1>
-              <p className="text-sm text-slate-400">Central de Ferramentas</p>
-            </div>
+            <img 
+              src="/logo-combined.png" 
+              alt="Forbiz & GetWork" 
+              className="h-12 w-auto"
+            />
           </div>
 
           <div className="bg-white rounded-xl shadow-2xl p-8">

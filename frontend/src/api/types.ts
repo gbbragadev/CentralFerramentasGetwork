@@ -41,12 +41,28 @@ export interface ResetPasswordRequest {
 export interface Tenant {
   id: string;
   name: string;
-  domain: string;
-  displayName: string | null;
-  logoUrl: string | null;
-  isActive: boolean;
+  slug: string;
+  // Compat com versões antigas
+  domain?: string;
+  displayName?: string | null;
+  logoUrl?: string | null;
+  active: boolean;
+  // Compat com versões antigas
+  isActive?: boolean;
+  metadata?: Record<string, unknown> | null;
   createdAt: string;
   updatedAt: string;
+  // Relações
+  seniorCredentials?: {
+    id: string;
+    baseUrl: string;
+    demoMode: boolean;
+  } | null;
+  _count?: {
+    rules: number;
+    schedules: number;
+    outboxMessages: number;
+  };
 }
 
 // ============================================================================

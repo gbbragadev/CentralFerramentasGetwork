@@ -29,7 +29,7 @@ export function TenantsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
-  const [formData, setFormData] = useState({ name: '', domain: '', isActive: true });
+  const [formData, setFormData] = useState({ name: '', slug: '', active: true });
   const [domainManuallyEdited, setDomainManuallyEdited] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -51,25 +51,25 @@ export function TenantsPage() {
     setFormData(prev => ({
       ...prev,
       name,
-      domain: domainManuallyEdited ? prev.domain : generateSlug(name)
+      slug: domainManuallyEdited ? prev.slug : generateSlug(name)
     }));
   }, [domainManuallyEdited]);
 
-  const handleDomainChange = (domain: string) => {
+  const handleSlugChange = (slug: string) => {
     setDomainManuallyEdited(true);
-    setFormData(prev => ({ ...prev, domain }));
+    setFormData(prev => ({ ...prev, slug }));
   };
 
   const handleCreate = () => {
     setSelectedTenant(null);
-    setFormData({ name: '', domain: '', isActive: true });
+    setFormData({ name: '', slug: '', active: true });
     setDomainManuallyEdited(false);
     setIsModalOpen(true);
   };
 
   const handleEdit = (tenant: Tenant) => {
     setSelectedTenant(tenant);
-    setFormData({ name: tenant.name, domain: tenant.domain, isActive: tenant.isActive });
+    setFormData({ name: tenant.name, slug: tenant.slug || tenant.domain || '', active: tenant.active ?? tenant.isActive ?? true });
     setDomainManuallyEdited(true); // Ao editar, considera que o domain já foi definido
     setIsModalOpen(true);
   };
@@ -104,14 +104,14 @@ export function TenantsPage() {
       return;
     }
 
-    if (!formData.domain.trim()) {
-      toast.error('O identificador (domain) é obrigatório');
+    if (!formData.slug.trim()) {
+      toast.error('O identificador (slug) é obrigatório');
       return;
     }
 
-    // Valida formato do domain
-    const domainRegex = /^[a-z0-9-]+$/;
-    if (!domainRegex.test(formData.domain)) {
+    // Valida formato do slug
+    const slugRegex = /^[a-z0-9-]+$/;
+    if (!slugRegex.test(formData.slug)) {
       toast.error('O identificador deve conter apenas letras minúsculas, números e hífens');
       return;
     }
@@ -141,7 +141,7 @@ export function TenantsPage() {
           </div>
           <div>
             <div className="font-medium text-slate-900">{row.name}</div>
-            <div className="text-xs text-slate-500">{row.domain}</div>
+            <div className="text-xs text-slate-500">{row.slug || row.domain}</div>
           </div>
         </div>
       ),
@@ -243,8 +243,8 @@ export function TenantsPage() {
           <div>
             <Input
               label="Identificador (Domain)"
-              value={formData.domain}
-              onChange={(e) => handleDomainChange(e.target.value.toLowerCase())}
+value={formData.slug}
+            onChange={(e) => handleSlugChange(e.target.value.toLowerCase())}
               placeholder="empresa-abc"
               hint="Identificador único usado em URLs e integrações. Gerado automaticamente a partir do nome."
               required
@@ -254,8 +254,8 @@ export function TenantsPage() {
             <input
               type="checkbox"
               id="isActive"
-              checked={formData.isActive}
-              onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+              checked={formData.active}
+              onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
               className="h-4 w-4 text-primary focus:ring-primary border-slate-300 rounded"
             />
             <label htmlFor="isActive" className="text-sm text-slate-700">
