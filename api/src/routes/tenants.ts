@@ -51,25 +51,19 @@ const normalizeAuthToken = (token: string) => (
   token.startsWith('Bearer ') ? token : `Bearer ${token}`
 );
 
-function buildSeniorBaseUrl(baseUrl: string, seniorTenant: string) {
-  const normalizedBase = baseUrl.replace(/\/$/, '');
-  if (normalizedBase.includes('/bridge/1.0/rest')) {
-    return normalizedBase;
-  }
-  if (normalizedBase.includes('/t/')) {
-    return `${normalizedBase}/bridge/1.0/rest`;
-  }
-  return `${normalizedBase}/t/${seniorTenant}/bridge/1.0/rest`;
-}
+// URL fixa da API Senior para autenticação
+const SENIOR_AUTH_URL = 'https://platform.senior.com.br/t/senior.com.br/bridge/1.0/rest/platform/authentication/actions/login';
 
-async function authenticateSenior(baseUrl: string, seniorTenant: string, username: string, password: string) {
-  const loginUrl = `${buildSeniorBaseUrl(baseUrl, seniorTenant)}/platform/authentication/actions/login`;
-  const response = await fetch(loginUrl, {
+async function authenticateSenior(seniorTenant: string, username: string, password: string) {
+  // Monta o username no formato: usuario@tenant (ex: gci@holdingterraverde.com.br)
+  const fullUsername = username.includes('@') ? username : `${username}@${seniorTenant}`;
+
+  const response = await fetch(SENIOR_AUTH_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ username: fullUsername, password }),
   });
 
   const data = (await response.json().catch(() => null)) as any;
@@ -363,7 +357,7 @@ export async function tenantsRoutes(app: FastifyInstance) {
       return send404(reply, 'Tenant');
     }
 
-    const authResult = await authenticateSenior(body.baseUrl, body.seniorTenant, body.username, body.password);
+    const authResult = await authenticateSenior(body.seniorTenant, body.username, body.password);
 
     if (!authResult.success) {
       // Atualizar erro nas credenciais se existirem
