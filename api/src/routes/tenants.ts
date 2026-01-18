@@ -4,6 +4,7 @@
 
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import bcrypt from 'bcryptjs';
 import { prisma } from '../index.js';
 import { 
   success, 
@@ -36,7 +37,7 @@ const credentialsSchema = z.object({
   username: z.string().min(1, 'Usuário obrigatório'),
   password: z.string().min(1).optional(),
   environment: z.enum(['production', 'sandbox']).default('production'),
-  demoMode: z.boolean().default(true),
+  demoMode: z.boolean().default(false),
 }).refine((data) => {
   return Boolean(data.authToken || data.password);
 }, {
@@ -280,6 +281,9 @@ export async function tenantsRoutes(app: FastifyInstance) {
   app.post('/:id/senior-credentials', async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = credentialsSchema.parse(request.body);
+    const baseUrl = body.baseUrl || 'https://platform.senior.com.br';
+    const environment = body.environment || 'production';
+    const hashedPassword = body.password ? await bcrypt.hash(body.password, 10) : undefined;
 
     // Verificar se tenant existe
     const tenant = await prisma.tenant.findUnique({ where: { id } });
@@ -296,7 +300,7 @@ export async function tenantsRoutes(app: FastifyInstance) {
       authToken = authToken ? normalizeAuthToken(authToken) : 'Bearer DEMO_TOKEN';
       lastAuthAt = new Date();
     } else if (!authToken && body.username && body.password) {
-      const authResult = await authenticateSenior(body.baseUrl, body.seniorTenant, body.username, body.password);
+      const authResult = await authenticateSenior(baseUrl, body.seniorTenant, body.username, body.password);
 
       if (!authResult.success) {
         lastAuthError = authResult.error;
@@ -323,8 +327,9 @@ export async function tenantsRoutes(app: FastifyInstance) {
         tenantId: id,
         seniorTenant: body.seniorTenant,
         username: body.username,
-        environment: body.environment,
-        baseUrl: body.baseUrl,
+        ...(hashedPassword && { password: hashedPassword }),
+        environment,
+        baseUrl,
         authToken,
         demoMode: body.demoMode,
         isActive: true,
@@ -335,8 +340,9 @@ export async function tenantsRoutes(app: FastifyInstance) {
       update: {
         seniorTenant: body.seniorTenant,
         username: body.username,
-        environment: body.environment,
-        baseUrl: body.baseUrl,
+        ...(hashedPassword && { password: hashedPassword }),
+        environment,
+        baseUrl,
         authToken,
         demoMode: body.demoMode,
         lastAuthAt,
