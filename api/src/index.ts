@@ -17,6 +17,7 @@ import { outboxRoutes } from './routes/outbox.js';
 import { logsRoutes } from './routes/logs.js';
 import { mockRoutes } from './routes/mock.js';
 import { productsRoutes } from './routes/products.js';
+import { externalRoutes } from './routes/external.js';
 
 // Lib
 import { ErrorCodes, apiError, validationError } from './lib/response.js';
@@ -103,6 +104,7 @@ await app.register(outboxRoutes, { prefix: '/outbox' });
 await app.register(logsRoutes, { prefix: '/logs' });
 await app.register(mockRoutes, { prefix: '/mock' });
 await app.register(productsRoutes, { prefix: '/products' });
+await app.register(externalRoutes, { prefix: '/external' });
 
 // Error handler global
 app.setErrorHandler((error, request, reply) => {
