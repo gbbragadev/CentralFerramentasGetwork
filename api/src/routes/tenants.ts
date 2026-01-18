@@ -413,4 +413,180 @@ export async function tenantsRoutes(app: FastifyInstance) {
 
     return success({ message: 'Credenciais excluídas com sucesso' });
   });
+
+  // ========================================
+  // Produtos do Tenant
+  // ========================================
+
+  const tenantProductSchema = z.object({
+    productId: z.string().uuid('ID do produto inválido'),
+    monthlyValue: z.number().min(0).optional().default(0),
+    acquisitionDate: z.string().optional().nullable(),
+    expirationDate: z.string().optional().nullable(),
+    isActive: z.boolean().optional().default(true),
+    notes: z.string().optional().nullable(),
+  });
+
+  const tenantProductUpdateSchema = tenantProductSchema.omit({ productId: true }).partial();
+
+  // GET /tenants/:id/products - Listar produtos do tenant
+  app.get('/:id/products', async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    const tenant = await prisma.tenant.findUnique({ where: { id } });
+    if (!tenant) {
+      return send404(reply, 'Tenant');
+    }
+
+    const tenantProducts = await prisma.tenantProduct.findMany({
+      where: { tenantId: id },
+      include: {
+        product: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            description: true,
+            icon: true,
+            isActive: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return success(tenantProducts);
+  });
+
+  // POST /tenants/:id/products - Vincular produto ao tenant
+  app.post('/:id/products', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = tenantProductSchema.parse(request.body);
+
+    const tenant = await prisma.tenant.findUnique({ where: { id } });
+    if (!tenant) {
+      return send404(reply, 'Tenant');
+    }
+
+    const product = await prisma.product.findUnique({ where: { id: body.productId } });
+    if (!product) {
+      return send404(reply, 'Produto');
+    }
+
+    // Verificar se já existe vínculo
+    const existing = await prisma.tenantProduct.findUnique({
+      where: {
+        tenantId_productId: {
+          tenantId: id,
+          productId: body.productId,
+        },
+      },
+    });
+
+    if (existing) {
+      return reply.status(409).send(apiError(ErrorCodes.CONFLICT, 'Produto já vinculado a este tenant'));
+    }
+
+    const tenantProduct = await prisma.tenantProduct.create({
+      data: {
+        tenantId: id,
+        productId: body.productId,
+        monthlyValue: body.monthlyValue ?? 0,
+        acquisitionDate: body.acquisitionDate ? new Date(body.acquisitionDate) : null,
+        expirationDate: body.expirationDate ? new Date(body.expirationDate) : null,
+        isActive: body.isActive ?? true,
+        notes: body.notes || null,
+      },
+      include: {
+        product: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    return reply.status(201).send(success(tenantProduct));
+  });
+
+  // PUT /tenants/:id/products/:productId - Atualizar vínculo
+  app.put('/:id/products/:productId', async (request, reply) => {
+    const { id, productId } = request.params as { id: string; productId: string };
+    const body = tenantProductUpdateSchema.parse(request.body);
+
+    const existing = await prisma.tenantProduct.findUnique({
+      where: {
+        tenantId_productId: {
+          tenantId: id,
+          productId,
+        },
+      },
+    });
+
+    if (!existing) {
+      return send404(reply, 'Vínculo');
+    }
+
+    const tenantProduct = await prisma.tenantProduct.update({
+      where: {
+        tenantId_productId: {
+          tenantId: id,
+          productId,
+        },
+      },
+      data: {
+        monthlyValue: body.monthlyValue ?? existing.monthlyValue,
+        acquisitionDate: body.acquisitionDate !== undefined
+          ? (body.acquisitionDate ? new Date(body.acquisitionDate) : null)
+          : existing.acquisitionDate,
+        expirationDate: body.expirationDate !== undefined
+          ? (body.expirationDate ? new Date(body.expirationDate) : null)
+          : existing.expirationDate,
+        isActive: body.isActive ?? existing.isActive,
+        notes: body.notes !== undefined ? body.notes : existing.notes,
+      },
+      include: {
+        product: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    return success(tenantProduct);
+  });
+
+  // DELETE /tenants/:id/products/:productId - Remover vínculo
+  app.delete('/:id/products/:productId', async (request, reply) => {
+    const { id, productId } = request.params as { id: string; productId: string };
+
+    const existing = await prisma.tenantProduct.findUnique({
+      where: {
+        tenantId_productId: {
+          tenantId: id,
+          productId,
+        },
+      },
+    });
+
+    if (!existing) {
+      return send404(reply, 'Vínculo');
+    }
+
+    await prisma.tenantProduct.delete({
+      where: {
+        tenantId_productId: {
+          tenantId: id,
+          productId,
+        },
+      },
+    });
+
+    return reply.status(204).send();
+  });
 }

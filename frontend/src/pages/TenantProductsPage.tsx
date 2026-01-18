@@ -6,25 +6,29 @@ import { Table } from '@/components/Table';
 import { Modal } from '@/components/Modal';
 import { apiClient } from '@/api/client';
 import { Tenant, Product, TenantProduct } from '@/api/types';
-import { ArrowLeft, Plus, Trash2, Package, Calendar, Settings, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Edit2, Package, Calendar, DollarSign, Settings, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function TenantProductsPage() {
   const { tenantId } = useParams<{ tenantId: string }>();
   const navigate = useNavigate();
-  
+
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [tenantProducts, setTenantProducts] = useState<TenantProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedTenantProduct, setSelectedTenantProduct] = useState<TenantProduct | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     productId: '',
+    monthlyValue: 0,
+    acquisitionDate: '',
+    expirationDate: '',
     isActive: true,
-    expiresAt: '',
+    notes: '',
   });
 
   const loadData = async () => {
@@ -57,13 +61,37 @@ export function TenantProductsPage() {
     loadData();
   }, [tenantId]);
 
-  const handleAddProduct = () => {
+  const resetForm = () => {
     setFormData({
       productId: '',
+      monthlyValue: 0,
+      acquisitionDate: '',
+      expirationDate: '',
       isActive: true,
-      expiresAt: '',
+      notes: '',
     });
+  };
+
+  const handleAddProduct = () => {
+    resetForm();
     setIsAddModalOpen(true);
+  };
+
+  const handleEditClick = (tenantProduct: TenantProduct) => {
+    setSelectedTenantProduct(tenantProduct);
+    setFormData({
+      productId: tenantProduct.productId,
+      monthlyValue: Number(tenantProduct.monthlyValue) || 0,
+      acquisitionDate: tenantProduct.acquisitionDate
+        ? new Date(tenantProduct.acquisitionDate).toISOString().split('T')[0]
+        : '',
+      expirationDate: tenantProduct.expirationDate
+        ? new Date(tenantProduct.expirationDate).toISOString().split('T')[0]
+        : '',
+      isActive: tenantProduct.isActive,
+      notes: tenantProduct.notes || '',
+    });
+    setIsEditModalOpen(true);
   };
 
   const handleDeleteClick = (tenantProduct: TenantProduct) => {
@@ -75,7 +103,7 @@ export function TenantProductsPage() {
     if (!selectedTenantProduct || !tenantId) return;
 
     setSubmitting(true);
-    const response = await apiClient.delete(`/tenants/${tenantId}/products/${selectedTenantProduct.id}`);
+    const response = await apiClient.delete(`/tenants/${tenantId}/products/${selectedTenantProduct.productId}`);
     setSubmitting(false);
 
     if (response.error) {
@@ -96,11 +124,16 @@ export function TenantProductsPage() {
     }
 
     setSubmitting(true);
-    const response = await apiClient.post(`/tenants/${tenantId}/products`, {
+    const payload = {
       productId: formData.productId,
+      monthlyValue: formData.monthlyValue || 0,
+      acquisitionDate: formData.acquisitionDate || null,
+      expirationDate: formData.expirationDate || null,
       isActive: formData.isActive,
-      expiresAt: formData.expiresAt || null,
-    });
+      notes: formData.notes || null,
+    };
+
+    const response = await apiClient.post(`/tenants/${tenantId}/products`, payload);
     setSubmitting(false);
 
     if (response.error) {
@@ -112,16 +145,53 @@ export function TenantProductsPage() {
     }
   };
 
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!selectedTenantProduct || !tenantId) return;
+
+    setSubmitting(true);
+    const payload = {
+      monthlyValue: formData.monthlyValue || 0,
+      acquisitionDate: formData.acquisitionDate || null,
+      expirationDate: formData.expirationDate || null,
+      isActive: formData.isActive,
+      notes: formData.notes || null,
+    };
+
+    const response = await apiClient.put(
+      `/tenants/${tenantId}/products/${selectedTenantProduct.productId}`,
+      payload
+    );
+    setSubmitting(false);
+
+    if (response.error) {
+      toast.error(response.error.message);
+    } else {
+      toast.success('Produto atualizado');
+      setIsEditModalOpen(false);
+      loadData();
+    }
+  };
+
   // Filter out products already assigned to tenant
   const availableProducts = products.filter(
     p => !tenantProducts.some(tp => tp.productId === p.id)
   );
 
+  const formatCurrency = (value: number | string) => {
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(num || 0);
+  };
+
   const columns = [
     {
       header: 'Produto',
       accessor: (row: TenantProduct) => {
-        const product = products.find(p => p.id === row.productId);
+        const product = row.product || products.find(p => p.id === row.productId);
         return (
           <div className="flex items-center gap-3">
             <div className="h-9 w-9 rounded-lg bg-blue-100 flex items-center justify-center">
@@ -132,6 +202,45 @@ export function TenantProductsPage() {
               <div className="text-xs text-slate-500 font-mono">{product?.code}</div>
             </div>
           </div>
+        );
+      },
+    },
+    {
+      header: 'Valor Mensal',
+      accessor: (row: TenantProduct) => (
+        <span className="inline-flex items-center gap-1 text-sm text-slate-700">
+          <DollarSign className="h-3 w-3" />
+          {formatCurrency(row.monthlyValue)}
+        </span>
+      ),
+    },
+    {
+      header: 'Aquisição',
+      accessor: (row: TenantProduct) => {
+        if (!row.acquisitionDate) {
+          return <span className="text-slate-400 text-sm">-</span>;
+        }
+        return (
+          <span className="text-sm text-slate-700">
+            {new Date(row.acquisitionDate).toLocaleDateString('pt-BR')}
+          </span>
+        );
+      },
+    },
+    {
+      header: 'Expiração',
+      accessor: (row: TenantProduct) => {
+        if (!row.expirationDate) {
+          return <span className="text-slate-500 text-sm">Sem expiração</span>;
+        }
+        const expiresAt = new Date(row.expirationDate);
+        const isExpired = expiresAt < new Date();
+        return (
+          <span className={`inline-flex items-center gap-1 text-sm ${isExpired ? 'text-red-600' : 'text-slate-700'}`}>
+            <Calendar className="h-3 w-3" />
+            {expiresAt.toLocaleDateString('pt-BR')}
+            {isExpired && <span className="text-xs">(expirado)</span>}
+          </span>
         );
       },
     },
@@ -150,26 +259,17 @@ export function TenantProductsPage() {
       ),
     },
     {
-      header: 'Expiração',
-      accessor: (row: TenantProduct) => {
-        if (!row.expiresAt) {
-          return <span className="text-slate-500 text-sm">Sem expiração</span>;
-        }
-        const expiresAt = new Date(row.expiresAt);
-        const isExpired = expiresAt < new Date();
-        return (
-          <span className={`inline-flex items-center gap-1 text-sm ${isExpired ? 'text-red-600' : 'text-slate-700'}`}>
-            <Calendar className="h-3 w-3" />
-            {expiresAt.toLocaleDateString('pt-BR')}
-            {isExpired && <span className="text-xs">(expirado)</span>}
-          </span>
-        );
-      },
-    },
-    {
       header: 'Ações',
       accessor: (row: TenantProduct) => (
         <div className="flex gap-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => handleEditClick(row)}
+            title="Editar"
+          >
+            <Edit2 className="h-4 w-4 text-slate-600" />
+          </Button>
           <Button
             size="sm"
             variant="ghost"
@@ -259,16 +359,49 @@ export function TenantProductsPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Data de Expiração (opcional)</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Valor Mensal (R$)</label>
             <input
-              type="date"
-              value={formData.expiresAt}
-              onChange={(e) => setFormData({ ...formData, expiresAt: e.target.value })}
+              type="number"
+              step="0.01"
+              min="0"
+              value={formData.monthlyValue}
+              onChange={(e) => setFormData({ ...formData, monthlyValue: parseFloat(e.target.value) || 0 })}
               className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+              placeholder="0,00"
             />
-            <p className="text-xs text-slate-500 mt-1">
-              Deixe em branco para acesso sem expiração
-            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Data de Aquisição</label>
+              <input
+                type="date"
+                value={formData.acquisitionDate}
+                onChange={(e) => setFormData({ ...formData, acquisitionDate: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Data de Expiração</label>
+              <input
+                type="date"
+                value={formData.expirationDate}
+                onChange={(e) => setFormData({ ...formData, expirationDate: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+              />
+              <p className="text-xs text-slate-500 mt-1">Deixe em branco para sem expiração</p>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Observações</label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+              rows={2}
+              placeholder="Observações sobre a licença..."
+            />
           </div>
 
           <div className="flex items-center gap-2 pt-2">
@@ -290,6 +423,89 @@ export function TenantProductsPage() {
             </Button>
             <Button type="submit" loading={submitting}>
               Adicionar Produto
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit Product Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title="Editar Licença"
+      >
+        <form onSubmit={handleEditSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Produto</label>
+            <div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-700">
+              {products.find(p => p.id === formData.productId)?.name || 'Produto'}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Valor Mensal (R$)</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={formData.monthlyValue}
+              onChange={(e) => setFormData({ ...formData, monthlyValue: parseFloat(e.target.value) || 0 })}
+              className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+              placeholder="0,00"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Data de Aquisição</label>
+              <input
+                type="date"
+                value={formData.acquisitionDate}
+                onChange={(e) => setFormData({ ...formData, acquisitionDate: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Data de Expiração</label>
+              <input
+                type="date"
+                value={formData.expirationDate}
+                onChange={(e) => setFormData({ ...formData, expirationDate: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Observações</label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+              rows={2}
+              placeholder="Observações sobre a licença..."
+            />
+          </div>
+
+          <div className="flex items-center gap-2 pt-2">
+            <input
+              type="checkbox"
+              id="isActiveEdit"
+              checked={formData.isActive}
+              onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+              className="h-4 w-4 text-primary focus:ring-primary border-slate-300 rounded"
+            />
+            <label htmlFor="isActiveEdit" className="text-sm text-slate-700">
+              Ativo
+            </label>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button type="button" variant="secondary" onClick={() => setIsEditModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" loading={submitting}>
+              Salvar Alterações
             </Button>
           </div>
         </form>

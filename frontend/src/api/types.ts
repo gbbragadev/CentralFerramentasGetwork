@@ -90,12 +90,11 @@ export interface TenantProduct {
   id: string;
   tenantId: string;
   productId: string;
+  monthlyValue: number | string;
+  acquisitionDate: string | null;
+  expirationDate: string | null;
   isActive: boolean;
-  expiresAt: string | null;
-  termsAcceptedAt: string | null;
-  termsAcceptedVersion: string | null;
-  activatedAt: string;
-  activatedBy: string | null;
+  notes: string | null;
   createdAt: string;
   updatedAt: string;
   tenant?: Tenant;
