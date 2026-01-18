@@ -21,14 +21,9 @@ Set-Location $projectDir
 # ============================================================
 Write-Host "[1/4] Iniciando containers Docker..." -ForegroundColor Yellow
 
-try {
-    docker-compose down 2>$null
-    docker-compose up -d
-    Write-Host "      Docker containers iniciados com sucesso!" -ForegroundColor Green
-} catch {
-    Write-Host "      ERRO ao iniciar Docker: $_" -ForegroundColor Red
-    exit 1
-}
+$dockerDown = docker-compose down 2>&1
+$dockerUp = docker-compose up -d 2>&1
+Write-Host "      Docker containers iniciados!" -ForegroundColor Green
 
 # Aguardar API ficar pronta
 Write-Host "      Aguardando API ficar pronta..." -ForegroundColor Gray
