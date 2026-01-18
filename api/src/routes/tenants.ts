@@ -39,18 +39,22 @@ const credentialsSchema = z.object({
   environment: z.enum(['production', 'sandbox']).default('production'),
   demoMode: z.boolean().default(false),
 }).refine((data) => {
-  return Boolean(data.authToken || data.password);
+  return Boolean(data.demoMode || data.authToken || data.password);
 }, {
-  message: 'Informe authToken ou senha',
+  message: 'Informe authToken ou senha, ou ative o modo demo',
 });
 
 const testConnectionSchema = z.object({
   baseUrl: z.string().url('URL inválida'),
   seniorTenant: z.string().min(1, 'Tenant Senior obrigatório'),
   username: z.string().min(1, 'Usuário obrigatório'),
-  password: z.string().min(1, 'Senha obrigatória'),
+  password: z.string().min(1, 'Senha obrigatória').optional(),
   demoMode: z.boolean().default(false),
   environment: z.enum(['production', 'sandbox']).default('production'),
+}).refine((data) => {
+  return Boolean(data.demoMode || data.password);
+}, {
+  message: 'Informe a senha ou ative o modo demo',
 });
 
 const normalizeAuthToken = (token: string) => (

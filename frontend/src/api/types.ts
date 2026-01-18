@@ -119,6 +119,7 @@ export interface SeniorCredentials {
   // Configurações
   environment: 'production' | 'sandbox';
   baseUrl: string;
+  demoMode: boolean;
   
   // Status (obtido automaticamente)
   isActive: boolean;
@@ -133,9 +134,10 @@ export interface SeniorCredentials {
 export interface SeniorCredentialsInput {
   seniorTenant: string;
   username: string;
-  password: string;
+  password?: string;
   environment: 'production' | 'sandbox';
   baseUrl?: string;
+  demoMode?: boolean;
 }
 
 export interface TestConnectionResult {
