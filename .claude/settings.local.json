@@ -14,7 +14,10 @@
       "Bash(1 <<'EOF'\nCREATE TABLE IF NOT EXISTS tenant_products \\(\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid\\(\\),\n  tenant_id UUID NOT NULL REFERENCES tenants\\(id\\) ON DELETE CASCADE,\n  product_id UUID NOT NULL REFERENCES products\\(id\\) ON DELETE CASCADE,\n  monthly_value DECIMAL\\(10, 2\\) NOT NULL DEFAULT 0,\n  acquisition_date DATE,\n  expiration_date DATE,\n  is_active BOOLEAN DEFAULT true,\n  notes TEXT,\n  created_at TIMESTAMP DEFAULT NOW\\(\\),\n  updated_at TIMESTAMP DEFAULT NOW\\(\\),\n  UNIQUE\\(tenant_id, product_id\\)\n\\);\nEOF)",
       "Bash(docker-compose logs:*)",
       "Bash(npx prisma db push:*)",
-      "Bash(npx prisma@5.22.0 db push:*)"
+      "Bash(npx prisma@5.22.0 db push:*)",
+      "Bash(dir /s /b *.ts *.tsx)",
+      "Bash(findstr:*)",
+      "Bash(git pull:*)"
     ]
   }
 }

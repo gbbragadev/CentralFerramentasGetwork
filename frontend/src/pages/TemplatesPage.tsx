@@ -214,7 +214,7 @@ export function TemplatesPage() {
     }
 
     setPreviewLoading(true);
-    const response = await apiClient.post<MessageTemplatePreview>(`/whatsapp-templates/${selectedTemplate.id}/preview`, {
+    const response = await apiClient.post<MessageTemplatePreview>(`/templates/${selectedTemplate.id}/preview`, {
       tenantId: previewTenantId,
     });
     setPreviewLoading(false);
