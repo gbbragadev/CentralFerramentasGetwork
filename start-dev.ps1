@@ -1,183 +1,205 @@
 # ============================================================
-# GetWork Portal - Script de Desenvolvimento
-# ============================================================
-# Inicia todos os servicos e cria tunnels Cloudflare
+# GetWork Portal - Script de Desenvolvimento com Tunnels
 # ============================================================
 
-$ErrorActionPreference = "Stop"
+$Host.UI.RawUI.WindowTitle = "GetWork Portal - Dev Server"
+$ErrorActionPreference = "SilentlyContinue"
 
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "       GetWork Portal - Iniciando Ambiente Dev" -ForegroundColor Cyan
+Write-Host "       GetWork Portal - Iniciando Ambiente" -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Diretorio do projeto
-$projectDir = $PSScriptRoot
+$projectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $projectDir
 
 # ============================================================
-# 1. Iniciar Docker
+# 1. Limpar processos anteriores
 # ============================================================
-Write-Host "[1/4] Iniciando containers Docker..." -ForegroundColor Yellow
+Write-Host "[1/5] Limpando processos anteriores..." -ForegroundColor Yellow
+Get-Process -Name "cloudflared" -ErrorAction SilentlyContinue | Stop-Process -Force
+Start-Sleep -Milliseconds 500
 
-$dockerDown = docker-compose down 2>&1
-$dockerUp = docker-compose up -d 2>&1
-Write-Host "      Docker containers iniciados!" -ForegroundColor Green
+# ============================================================
+# 2. Iniciar Docker
+# ============================================================
+Write-Host "[2/5] Iniciando Docker..." -ForegroundColor Yellow
+docker-compose down 2>$null | Out-Null
+docker-compose up -d 2>&1 | Out-Null
 
-# Aguardar API ficar pronta
-Write-Host "      Aguardando API ficar pronta..." -ForegroundColor Gray
-$maxRetries = 30
-$retryCount = 0
-do {
+# Aguardar API
+Write-Host "      Aguardando API..." -ForegroundColor Gray
+for ($i = 0; $i -lt 30; $i++) {
     Start-Sleep -Seconds 1
-    $retryCount++
     try {
-        $response = Invoke-RestMethod -Uri "http://localhost:4000/health" -TimeoutSec 2 -ErrorAction SilentlyContinue
-        if ($response.status -eq "ok") {
+        $health = Invoke-RestMethod -Uri "http://localhost:4000/health" -TimeoutSec 2
+        if ($health.status -eq "ok") {
             Write-Host "      API pronta!" -ForegroundColor Green
             break
         }
     } catch {}
-} while ($retryCount -lt $maxRetries)
-
-if ($retryCount -ge $maxRetries) {
-    Write-Host "      AVISO: API nao respondeu em 30s" -ForegroundColor Yellow
 }
 
 # ============================================================
-# 2. Iniciar Frontend
+# 3. Criar Tunnel da API primeiro (para pegar a URL)
 # ============================================================
-Write-Host ""
-Write-Host "[2/4] Iniciando frontend..." -ForegroundColor Yellow
+Write-Host "[3/5] Criando Tunnel da API..." -ForegroundColor Yellow
+
+$apiTunnelLog = Join-Path $env:TEMP "getwork-api-tunnel.log"
+Remove-Item $apiTunnelLog -Force -ErrorAction SilentlyContinue
+
+$apiTunnelProcess = Start-Process -FilePath "cloudflared" `
+    -ArgumentList "tunnel --url http://localhost:4000" `
+    -PassThru -WindowStyle Hidden `
+    -RedirectStandardError $apiTunnelLog
+
+# Aguardar URL da API
+$apiTunnelUrl = $null
+for ($i = 0; $i -lt 15; $i++) {
+    Start-Sleep -Seconds 1
+    if (Test-Path $apiTunnelLog) {
+        $content = Get-Content $apiTunnelLog -Raw
+        if ($content -match "(https://[a-z0-9-]+\.trycloudflare\.com)") {
+            $apiTunnelUrl = $matches[1]
+            Write-Host "      API Tunnel: $apiTunnelUrl" -ForegroundColor Green
+            break
+        }
+    }
+}
+
+# ============================================================
+# 4. Iniciar Frontend com URL da API
+# ============================================================
+Write-Host "[4/5] Iniciando Frontend..." -ForegroundColor Yellow
 
 $frontendDir = Join-Path $projectDir "frontend"
-$frontendProcess = Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d `"$frontendDir`" && npm run dev" -PassThru -WindowStyle Minimized
 
-# Aguardar frontend
-Start-Sleep -Seconds 5
-
-# Descobrir porta do frontend
-$frontendPort = 5173
-for ($port = 5173; $port -le 5180; $port++) {
-    try {
-        $tcpClient = New-Object System.Net.Sockets.TcpClient
-        $tcpClient.Connect("localhost", $port)
-        $tcpClient.Close()
-        $frontendPort = $port
-        break
-    } catch {}
+# Criar arquivo .env.local temporário com a URL da API
+$envFile = Join-Path $frontendDir ".env.local"
+if ($apiTunnelUrl) {
+    "VITE_API_URL=$apiTunnelUrl" | Out-File -FilePath $envFile -Encoding UTF8
+    Write-Host "      Configurado VITE_API_URL=$apiTunnelUrl" -ForegroundColor Gray
 }
 
-Write-Host "      Frontend rodando na porta $frontendPort" -ForegroundColor Green
+# Iniciar frontend em processo separado
+$frontendProcess = Start-Process -FilePath "cmd.exe" `
+    -ArgumentList "/c cd /d `"$frontendDir`" && npm run dev -- --port 3000 --host" `
+    -PassThru -WindowStyle Minimized
+
+Start-Sleep -Seconds 6
+Write-Host "      Frontend iniciado na porta 3000!" -ForegroundColor Green
 
 # ============================================================
-# 3. Criar Cloudflare Tunnels
+# 5. Criar Tunnel do Frontend
 # ============================================================
-Write-Host ""
-Write-Host "[3/4] Criando Cloudflare tunnels..." -ForegroundColor Yellow
+Write-Host "[5/5] Criando Tunnel do Frontend..." -ForegroundColor Yellow
 
-# Arquivo para capturar URLs
-$tunnelUrlsFile = Join-Path $env:TEMP "getwork-tunnels.txt"
-"" | Out-File $tunnelUrlsFile -Encoding UTF8
-
-# Tunnel para API (porta 4000)
-$apiTunnelLog = Join-Path $env:TEMP "getwork-api-tunnel.log"
-$apiTunnelProcess = Start-Process -FilePath "cloudflared" -ArgumentList "tunnel --url http://localhost:4000" -PassThru -WindowStyle Hidden -RedirectStandardError $apiTunnelLog
-
-# Tunnel para Frontend
 $frontendTunnelLog = Join-Path $env:TEMP "getwork-frontend-tunnel.log"
-$frontendTunnelProcess = Start-Process -FilePath "cloudflared" -ArgumentList "tunnel --url http://localhost:$frontendPort" -PassThru -WindowStyle Hidden -RedirectStandardError $frontendTunnelLog
+Remove-Item $frontendTunnelLog -Force -ErrorAction SilentlyContinue
 
-Write-Host "      Aguardando tunnels serem criados..." -ForegroundColor Gray
-Start-Sleep -Seconds 8
+$frontendTunnelProcess = Start-Process -FilePath "cloudflared" `
+    -ArgumentList "tunnel --url http://localhost:3000" `
+    -PassThru -WindowStyle Hidden `
+    -RedirectStandardError $frontendTunnelLog
 
-# Extrair URLs dos logs
-$apiUrl = ""
-$frontendUrl = ""
-
-if (Test-Path $apiTunnelLog) {
-    $apiLogContent = Get-Content $apiTunnelLog -Raw
-    if ($apiLogContent -match "https://[a-z0-9-]+\.trycloudflare\.com") {
-        $apiUrl = $matches[0]
-    }
-}
-
-if (Test-Path $frontendTunnelLog) {
-    $frontendLogContent = Get-Content $frontendTunnelLog -Raw
-    if ($frontendLogContent -match "https://[a-z0-9-]+\.trycloudflare\.com") {
-        $frontendUrl = $matches[0]
+# Aguardar URL do Frontend
+$frontendTunnelUrl = $null
+for ($i = 0; $i -lt 15; $i++) {
+    Start-Sleep -Seconds 1
+    if (Test-Path $frontendTunnelLog) {
+        $content = Get-Content $frontendTunnelLog -Raw
+        if ($content -match "(https://[a-z0-9-]+\.trycloudflare\.com)") {
+            $frontendTunnelUrl = $matches[1]
+            break
+        }
     }
 }
 
 # ============================================================
-# 4. Exibir URLs
+# Exibir URLs
 # ============================================================
+Clear-Host
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor Green
-Write-Host "       GetWork Portal - Ambiente Pronto!" -ForegroundColor Green
+Write-Host "       GetWork Portal - ONLINE" -ForegroundColor Green
 Write-Host "============================================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "  URLs Locais:" -ForegroundColor White
-Write-Host "    Frontend:  " -NoNewline; Write-Host "http://localhost:$frontendPort" -ForegroundColor Cyan
+Write-Host "  ACESSO LOCAL:" -ForegroundColor White
+Write-Host "    Frontend:  " -NoNewline; Write-Host "http://localhost:3000" -ForegroundColor Cyan
 Write-Host "    API:       " -NoNewline; Write-Host "http://localhost:4000" -ForegroundColor Cyan
 Write-Host ""
 
-if ($apiUrl -or $frontendUrl) {
-    Write-Host "  URLs Publicas (Cloudflare Tunnel):" -ForegroundColor White
-    if ($frontendUrl) {
-        Write-Host "    Frontend:  " -NoNewline; Write-Host $frontendUrl -ForegroundColor Magenta
-    }
-    if ($apiUrl) {
-        Write-Host "    API:       " -NoNewline; Write-Host $apiUrl -ForegroundColor Magenta
-    }
+if ($frontendTunnelUrl) {
+    Write-Host "  ACESSO PUBLICO (Cloudflare Tunnel):" -ForegroundColor White
     Write-Host ""
-    Write-Host "  NOTA: URLs publicas mudam a cada execucao" -ForegroundColor DarkGray
+    Write-Host "    >>> " -NoNewline -ForegroundColor Yellow
+    Write-Host $frontendTunnelUrl -ForegroundColor Magenta
+    Write-Host ""
+
+    if ($apiTunnelUrl) {
+        Write-Host "    API: $apiTunnelUrl" -ForegroundColor DarkGray
+    }
+
+    Write-Host ""
+    $frontendTunnelUrl | Set-Clipboard
+    Write-Host "  (URL copiada para clipboard)" -ForegroundColor DarkGray
+
+    # Abrir navegador
+    Start-Process $frontendTunnelUrl
 } else {
-    Write-Host "  Cloudflare tunnels ainda carregando..." -ForegroundColor Yellow
-    Write-Host "  Execute novamente ou verifique os logs em:" -ForegroundColor DarkGray
-    Write-Host "    $apiTunnelLog" -ForegroundColor DarkGray
-    Write-Host "    $frontendTunnelLog" -ForegroundColor DarkGray
+    Write-Host "  Tunnel ainda carregando..." -ForegroundColor Yellow
+    Start-Process "http://localhost:3000"
 }
 
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor Green
-Write-Host "  Pressione ENTER para encerrar todos os servicos..." -ForegroundColor Yellow
+Write-Host "  Servidor rodando. Pressione Ctrl+C para encerrar." -ForegroundColor Yellow
 Write-Host "============================================================" -ForegroundColor Green
 Write-Host ""
 
-# Abrir navegador
-if ($frontendUrl) {
-    Start-Process $frontendUrl
-} else {
-    Start-Process "http://localhost:$frontendPort"
-}
-
-# Aguardar usuario
-Read-Host
-
 # ============================================================
-# Encerrar processos
+# Manter rodando
 # ============================================================
-Write-Host ""
-Write-Host "Encerrando servicos..." -ForegroundColor Yellow
+try {
+    while ($true) {
+        Start-Sleep -Seconds 10
 
-if ($frontendProcess -and !$frontendProcess.HasExited) {
-    Stop-Process -Id $frontendProcess.Id -Force -ErrorAction SilentlyContinue
+        # Mostrar URL do frontend se ainda nao temos
+        if (-not $frontendTunnelUrl -and (Test-Path $frontendTunnelLog)) {
+            $content = Get-Content $frontendTunnelLog -Raw
+            if ($content -match "(https://[a-z0-9-]+\.trycloudflare\.com)") {
+                $frontendTunnelUrl = $matches[1]
+                Write-Host ""
+                Write-Host "  URL PUBLICA: $frontendTunnelUrl" -ForegroundColor Magenta
+                $frontendTunnelUrl | Set-Clipboard
+            }
+        }
+    }
+} finally {
+    Write-Host ""
+    Write-Host "Encerrando..." -ForegroundColor Yellow
+
+    # Limpar .env.local
+    Remove-Item $envFile -Force -ErrorAction SilentlyContinue
+
+    # Parar processos
+    if ($frontendProcess -and -not $frontendProcess.HasExited) {
+        Stop-Process -Id $frontendProcess.Id -Force -ErrorAction SilentlyContinue
+    }
+    if ($apiTunnelProcess -and -not $apiTunnelProcess.HasExited) {
+        Stop-Process -Id $apiTunnelProcess.Id -Force -ErrorAction SilentlyContinue
+    }
+    if ($frontendTunnelProcess -and -not $frontendTunnelProcess.HasExited) {
+        Stop-Process -Id $frontendTunnelProcess.Id -Force -ErrorAction SilentlyContinue
+    }
+
+    # Parar Docker
+    docker-compose down 2>&1 | Out-Null
+
+    # Limpar logs
+    Remove-Item $apiTunnelLog -Force -ErrorAction SilentlyContinue
+    Remove-Item $frontendTunnelLog -Force -ErrorAction SilentlyContinue
+
+    Write-Host "Encerrado!" -ForegroundColor Green
 }
-if ($apiTunnelProcess -and !$apiTunnelProcess.HasExited) {
-    Stop-Process -Id $apiTunnelProcess.Id -Force -ErrorAction SilentlyContinue
-}
-if ($frontendTunnelProcess -and !$frontendTunnelProcess.HasExited) {
-    Stop-Process -Id $frontendTunnelProcess.Id -Force -ErrorAction SilentlyContinue
-}
-
-# Parar Docker
-docker-compose down
-
-# Limpar arquivos temporarios
-Remove-Item $apiTunnelLog -ErrorAction SilentlyContinue
-Remove-Item $frontendTunnelLog -ErrorAction SilentlyContinue
-
-Write-Host "Servicos encerrados!" -ForegroundColor Green
-Write-Host ""
