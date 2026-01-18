@@ -36,7 +36,7 @@ export function LoginPage() {
           <img 
             src="/logo-dark.png" 
             alt="Forbiz & GetWork" 
-            className="h-16 w-auto object-contain"
+            className="h-24 w-auto object-contain"
           />
           
           <h2 className="text-2xl font-semibold mb-4">
@@ -85,7 +85,7 @@ export function LoginPage() {
             <img 
               src="/logo-light.png" 
               alt="Forbiz & GetWork" 
-              className="h-12 w-auto object-contain"
+              className="h-16 w-auto object-contain"
             />
           </div>
 

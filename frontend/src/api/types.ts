@@ -56,7 +56,6 @@ export interface Tenant {
   seniorCredentials?: {
     id: string;
     baseUrl: string;
-    demoMode: boolean;
   } | null;
   _count?: {
     rules: number;
@@ -133,7 +132,7 @@ export interface SeniorCredentials {
 export interface SeniorCredentialsInput {
   seniorTenant: string;
   username: string;
-  password: string;
+  password?: string;
   environment: 'production' | 'sandbox';
   baseUrl?: string;
 }
