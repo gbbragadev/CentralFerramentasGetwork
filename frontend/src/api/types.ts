@@ -211,10 +211,31 @@ export interface WhatsAppSource {
 // DATA SOURCES (FONTES DE DADOS REUTILIZÁVEIS)
 // ============================================================================
 
+export type DataSourceModule =
+  | 'HCM_GED'
+  | 'HCM_EMPLOYEEJOURNEY'
+  | 'PLATFORM_SIGN'
+  | 'PLATFORM_USER'
+  | 'PLATFORM_AUTHORIZATION';
+
+export interface DefaultRecipientsMapping {
+  phonePath: string;
+  namePath?: string | null;
+  iterateOverPath?: string | null;
+  filterExpression?: string | null;
+}
+
+export interface DefaultMappings {
+  employeeNamePath?: string | null;
+  companyNamePath?: string | null;
+  defaultRecipients: DefaultRecipientsMapping;
+}
+
 export interface DataSource {
   id: string;
   name: string;
   description: string | null;
+  module: DataSourceModule;
 
   // Configuração da API
   apiModule: string;          // sign, ecm_ged, hcm, etc.
@@ -226,11 +247,15 @@ export interface DataSource {
   // Mapeamento de resposta
   responseDataPath: string | null;
   responseMapping: Record<string, unknown> | null;
+  defaultMappings: DefaultMappings | null;
 
   // Status
   isActive: boolean;
   lastTestedAt: string | null;
   lastTestStatus: 'SUCCESS' | 'ERROR' | null;
+  lastTestResponse?: unknown | null;
+  lastTestExtractedData?: unknown | null;
+  lastTestPaths?: string[] | null;
 
   createdAt: string;
   updatedAt: string;
@@ -245,11 +270,14 @@ export interface DataSourcePreset {
   id: string;
   name: string;
   description: string;
+  module: DataSourceModule;
   apiModule: string;
   apiMethod: string;
   apiEndpoint: string;
   apiParams: Record<string, unknown>;
   responseDataPath: string;
+  availableFields?: string[];
+  defaultMappings?: DefaultMappings;
 }
 
 export interface DataSourceTestResult {
@@ -262,6 +290,25 @@ export interface DataSourceTestResult {
   response: unknown;
   extractedData: unknown;
   recordCount: number | null;
+  detectedPaths: string[];
+}
+
+export interface DataSourceModulePreset {
+  id: DataSourceModule;
+  label: string;
+  description: string;
+  apiModule: string;
+  defaultDataSource: {
+    name: string;
+    description?: string;
+    apiModule: string;
+    apiMethod: 'GET' | 'POST';
+    apiEndpoint: string;
+    apiParams: Record<string, unknown>;
+    responseDataPath?: string;
+  };
+  defaultMappings: DefaultMappings;
+  endpoints: Array<{ path: string; name: string; method: 'GET' | 'POST' }>;
 }
 
 // ============================================================================
@@ -320,6 +367,19 @@ export interface MessageTemplatePreview {
     name: string | null;
     message: string;
   }>;
+  filterError?: string | null;
+}
+
+export interface MessageTemplatePreset {
+  id: string;
+  name: string;
+  description: string;
+  module: DataSourceModule;
+  messageBody: string;
+  recipientField?: string;
+  recipientNameField?: string;
+  iterateOverField?: string;
+  filterExpression?: string;
 }
 
 // ============================================================================

@@ -6,6 +6,9 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../index.js';
 import { success, send404, apiError, ErrorCodes } from '../lib/response.js';
+import { resolvePath } from '../utils/dataPaths.js';
+import { buildFilterEvaluator } from '../utils/filters.js';
+import { modulePresets } from '../modules/data-sources/modulePresets.js';
 
 const templateSchema = z.object({
   name: z.string().min(1, 'Nome obrigatório'),
@@ -41,32 +44,56 @@ function extractPlaceholders(template: string): string[] {
 // Função para substituir placeholders por valores
 function renderTemplate(template: string, data: Record<string, any>): string {
   return template.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
-    const value = getNestedValue(data, path.trim());
-    return value !== undefined ? String(value) : match;
+    const value = resolvePath(data, path.trim());
+    if (value === undefined || value === null) {
+      return match;
+    }
+    if (Array.isArray(value)) {
+      return value.map((item) => String(item)).join(', ');
+    }
+    if (typeof value === 'object') {
+      return JSON.stringify(value);
+    }
+    return String(value);
   });
 }
 
-// Função para acessar valores aninhados (ex: "signer.name", "envelope.documents[0].title")
-function getNestedValue(obj: any, path: string): any {
-  const parts = path.split('.');
-  let current = obj;
-
-  for (const part of parts) {
-    if (current === null || current === undefined) {
-      return undefined;
-    }
-
-    // Verificar se é acesso a array (ex: documents[0])
-    const arrayMatch = part.match(/^(\w+)\[(\d+)\]$/);
-    if (arrayMatch) {
-      const [, key, index] = arrayMatch;
-      current = current[key]?.[parseInt(index, 10)];
-    } else {
-      current = current[part];
-    }
+function normalizeIteratePath(path?: string | null) {
+  if (!path) {
+    return '';
   }
+  return path.endsWith('[]') ? path.slice(0, -2) : path;
+}
 
-  return current;
+function stripIteratePrefix(path: string, iterateOverField?: string | null) {
+  if (!iterateOverField) {
+    return path.replace(/\[\]\./g, '.').replace(/\[\]$/g, '');
+  }
+  const normalized = normalizeIteratePath(iterateOverField);
+  if (path.startsWith(`${normalized}[].`)) {
+    return path.slice(normalized.length + 3);
+  }
+  if (path.startsWith(`${normalized}.`)) {
+    return path.slice(normalized.length + 1);
+  }
+  return path;
+}
+
+function setPathValue(target: Record<string, any>, path: string, value: unknown) {
+  const normalized = normalizeIteratePath(path);
+  const parts = normalized.split('.').filter(Boolean);
+  if (parts.length === 0) {
+    return;
+  }
+  let current = target;
+  for (let i = 0; i < parts.length - 1; i += 1) {
+    const key = parts[i];
+    if (!current[key] || typeof current[key] !== 'object') {
+      current[key] = {};
+    }
+    current = current[key];
+  }
+  current[parts[parts.length - 1]] = value;
 }
 
 export async function templatesRoutes(app: FastifyInstance) {
@@ -87,6 +114,18 @@ export async function templatesRoutes(app: FastifyInstance) {
       },
     });
     return success(templates);
+  });
+
+  // GET /templates/presets - Modelos de texto por modulo
+  app.get('/presets', async () => {
+    const presets = modulePresets.flatMap((modulePreset) =>
+      modulePreset.templatePresets.map((preset) => ({
+        ...preset,
+        module: modulePreset.id,
+      }))
+    );
+
+    return success(presets);
   });
 
   // GET /templates/:id - Buscar por ID
@@ -306,13 +345,9 @@ export async function templatesRoutes(app: FastifyInstance) {
     }
 
     // Extrair dados usando o path configurado
-    let extractedData = responseData;
-    if (template.dataSource.responseDataPath) {
-      const paths = template.dataSource.responseDataPath.split('.');
-      for (const path of paths) {
-        extractedData = extractedData?.[path];
-      }
-    }
+    const extractedData = template.dataSource.responseDataPath
+      ? resolvePath(responseData, template.dataSource.responseDataPath)
+      : responseData;
 
     // Pegar primeiro item se for array (para preview)
     const sampleItem = Array.isArray(extractedData) ? extractedData[0] : extractedData;
@@ -321,24 +356,51 @@ export async function templatesRoutes(app: FastifyInstance) {
     const placeholders = extractPlaceholders(template.messageBody);
     const rendered = sampleItem ? renderTemplate(template.messageBody, sampleItem) : template.messageBody;
 
-    // Extrair destinatários se iterateOverField estiver configurado
+    // Extrair destinatarios considerando iteracao e filtro
     let recipients: any[] = [];
-    if (template.iterateOverField && sampleItem) {
-      const items = getNestedValue(sampleItem, template.iterateOverField);
+    let filterError: string | null = null;
+    const evaluator = buildFilterEvaluator(template.filterExpression);
+
+    if (sampleItem) {
+      const items = template.iterateOverField
+        ? resolvePath(sampleItem, template.iterateOverField)
+        : Array.isArray(extractedData)
+          ? extractedData
+          : null;
+
       if (Array.isArray(items)) {
-        recipients = items.map((item: any, index: number) => {
-          const phone = getNestedValue(item, template.recipientField.replace(`${template.iterateOverField}[].`, ''));
-          const name = template.recipientNameField
-            ? getNestedValue(item, template.recipientNameField.replace(`${template.iterateOverField}[].`, ''))
-            : null;
-          const itemData = { ...sampleItem, [template.iterateOverField.split('.').pop()!]: item };
-          return {
-            index,
-            phone,
-            name,
-            message: renderTemplate(template.messageBody, itemData),
-          };
-        });
+        const phonePath = stripIteratePrefix(template.recipientField, template.iterateOverField);
+        const namePath = template.recipientNameField
+          ? stripIteratePrefix(template.recipientNameField, template.iterateOverField)
+          : null;
+
+        recipients = items
+          .map((item: any, index: number) => {
+            if (evaluator) {
+              const result = evaluator(item);
+              if (result.error) {
+                filterError = result.error;
+              }
+              if (!result.matches) {
+                return null;
+              }
+            }
+
+            const phone = resolvePath(item, phonePath);
+            const name = namePath ? resolvePath(item, namePath) : null;
+            const itemContext = template.iterateOverField ? { ...sampleItem } : item;
+            if (template.iterateOverField) {
+              setPathValue(itemContext, template.iterateOverField, [item]);
+            }
+
+            return {
+              index,
+              phone: phone ? String(phone) : null,
+              name: name ? String(name) : null,
+              message: renderTemplate(template.messageBody, itemContext),
+            };
+          })
+          .filter(Boolean);
       }
     }
 
@@ -347,8 +409,9 @@ export async function templatesRoutes(app: FastifyInstance) {
       rendered,
       placeholders,
       sampleData: sampleItem,
-      totalRecords: Array.isArray(extractedData) ? extractedData.length : 1,
+      totalRecords: Array.isArray(extractedData) ? extractedData.length : (extractedData ? 1 : 0),
       recipients,
+      filterError,
     });
   });
 
@@ -388,3 +451,5 @@ export async function templatesRoutes(app: FastifyInstance) {
     return success(commonPlaceholders);
   });
 }
+
+

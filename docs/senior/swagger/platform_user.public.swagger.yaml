@@ -1,0 +1,3214 @@
+swagger: '2.0'
+
+info:
+  version: 12.17.0
+  title: Usuários
+  description: 'Responsável pelo novo serviço de usuários da plataforma G7.'
+  x-senior-domain: Plataforma
+  x-senior-domain-path: platform
+  x-senior-service-path: user
+  contact:
+    name: Senior X Platform
+    url: https://dev.senior.com.br
+    email: seniorx-dev@senior.com.br
+
+host: api.senior.com.br
+
+basePath: /platform/user
+
+securityDefinitions:
+  bearerAuth:
+    type: apiKey
+    in: header
+    name: Authorization
+
+produces:
+  - application/json
+consumes:
+  - application/json
+parameters:
+  clientId:
+    name: client_id
+    type: string
+    in: header
+    required: true
+    description: 'Identificação da aplicação cadastrada no portal do desenvolvedor (api.xplatform.com.br)'
+
+paths:
+  /generateImpersonationToken:
+    post:
+      description: 'Gera um token para personificação com base no usuário da mensagem corrente'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - password
+            properties:
+              password:
+                type: string
+                description: 'Senha do usuário para gerar o token'
+      responses:
+        200:
+          description: 'Ok'
+        400:
+          description: 'Nome do grupo inválido.'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /finalizeImpersonation:
+    post:
+      description: 'Finaliza a personificação do usuário'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - username
+            properties:
+              username:
+                type: string
+                description: 'Username do usuário que será finalizado a personificação'
+      responses:
+        200:
+          description: 'Ok'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /getUser:
+    post:
+      description: 'API DEPRECIADA: Use getUser version 8 instead. | DATA: 2022-01-14 | Retorna as informações básicas do usuário passado como parâmetro. Se o usuário não for informado, retorna os dados do usuário corrente (que efetuou o login)'
+      x-senior-event: false
+      deprecated: true
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              username:
+                type: string
+                description: 'Nome do usuário no formato nome@dominio_tenant'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - id
+              - username
+              - fullName
+              - email
+              - tenantDomain
+              - tenantName
+              - tenantLocale
+              - blocked
+              - authenticationType
+              - integration
+              - photo
+              - admin
+              - passwordExpirationExempt
+            properties:
+              id:
+                type: string
+                description: 'Identificador do usuário'
+              username:
+                type: string
+                description: 'Nome do usuário'
+              fullName:
+                type: string
+                description: 'Nome completo do usuário'
+              description:
+                type: string
+                description: 'Descrição do usuário'
+              email:
+                type: string
+                description: 'Endereço de e-mail do usuário'
+              locale:
+                type: string
+                description: 'localidade do usuário'
+              tenantDomain:
+                type: string
+                description: 'Domínio do tenant no login do usuário'
+              tenantName:
+                type: string
+                description: 'Nome do tenant do usuário'
+              tenantLocale:
+                type: string
+                description: 'Localidade do tenant do usuário'
+              blocked:
+                type: boolean
+                description: 'Indica se o usuário está bloqueado'
+              authenticationType:
+                $ref: '#/definitions/authType'
+              integration:
+                $ref: '#/definitions/integration'
+              changePassword:
+                type: boolean
+                description: 'Indica se o usuário precisa trocar de senha no próximo logon'
+              photo:
+                type: string
+                description: 'DEPRECADO: Essa propriedade só será retornada na versão descontinuada da primitiva getUser. Utilize a versão atual. Foto do usuário em Base64'
+              properties:
+                $ref: '#/definitions/property'
+              admin:
+                type: boolean
+                description: 'Indica se o usuário é um admin de tenant'
+              allowedToChangePassword:
+                type: boolean
+                description: 'Indica se o usuário pode alterar a sua senha.&#10;É possível alterar a senha quando o tipo de autenticação do tenant é G7 ou quando é G5 e o tenant está configurado para permitir alterar a senha pela G7.'
+              passwordExpirationExempt:
+                type: boolean
+                description: 'Indica se o usuário está isento da política de expiração de senha'
+              expirationDate:
+                type: string
+                description: 'Data de expiração do usuário em UTC.'
+              timezone:
+                type: integer
+                description: 'Timezone em minutos do usuário'
+              photoUrl:
+                type: string
+                description: 'URL da foto do usuário armazenada no blob-service'
+              photoUrlExpirationDate:
+                type: string
+                description: 'Data de expiração da URL da foto do usuário'
+              phoneNumber:
+                type: string
+                description: 'Campo de Telefone (Opcional)'
+              expiredPassword:
+                type: boolean
+                description: 'A senha do usuário está expirada'
+              passwordExpiryAt:
+                type: string
+                description: 'A senha do usuário irá expirar em'
+        404:
+          description: 'Objeto não encontrado'
+        403:
+          description: 'Permissão negada'
+        401:
+          description: 'Usuário ou senha inválido'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: 'API DEPRECIADA: Use getUser version 8 instead. | DATA: 2022-01-14 | Retorna as informações básicas do usuário passado como parâmetro. Se o usuário não for informado, retorna os dados do usuário corrente (que efetuou o login)'
+      x-senior-event: false
+      deprecated: true
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              username:
+                type: string
+                description: 'Nome do usuário no formato nome@dominio_tenant'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - id
+              - username
+              - fullName
+              - email
+              - tenantDomain
+              - tenantName
+              - tenantLocale
+              - blocked
+              - authenticationType
+              - integration
+              - photo
+              - admin
+              - passwordExpirationExempt
+            properties:
+              id:
+                type: string
+                description: 'Identificador do usuário'
+              username:
+                type: string
+                description: 'Nome do usuário'
+              fullName:
+                type: string
+                description: 'Nome completo do usuário'
+              description:
+                type: string
+                description: 'Descrição do usuário'
+              email:
+                type: string
+                description: 'Endereço de e-mail do usuário'
+              locale:
+                type: string
+                description: 'localidade do usuário'
+              tenantDomain:
+                type: string
+                description: 'Domínio do tenant no login do usuário'
+              tenantName:
+                type: string
+                description: 'Nome do tenant do usuário'
+              tenantLocale:
+                type: string
+                description: 'Localidade do tenant do usuário'
+              blocked:
+                type: boolean
+                description: 'Indica se o usuário está bloqueado'
+              authenticationType:
+                $ref: '#/definitions/authType'
+              integration:
+                $ref: '#/definitions/integration'
+              changePassword:
+                type: boolean
+                description: 'Indica se o usuário precisa trocar de senha no próximo logon'
+              photo:
+                type: string
+                description: 'DEPRECADO: Essa propriedade só será retornada na versão descontinuada da primitiva getUser. Utilize a versão atual. Foto do usuário em Base64'
+              properties:
+                $ref: '#/definitions/property'
+              admin:
+                type: boolean
+                description: 'Indica se o usuário é um admin de tenant'
+              allowedToChangePassword:
+                type: boolean
+                description: 'Indica se o usuário pode alterar a sua senha.&#10;É possível alterar a senha quando o tipo de autenticação do tenant é G7 ou quando é G5 e o tenant está configurado para permitir alterar a senha pela G7.'
+              passwordExpirationExempt:
+                type: boolean
+                description: 'Indica se o usuário está isento da política de expiração de senha'
+              expirationDate:
+                type: string
+                description: 'Data de expiração do usuário em UTC.'
+              timezone:
+                type: integer
+                description: 'Timezone em minutos do usuário'
+              photoUrl:
+                type: string
+                description: 'URL da foto do usuário armazenada no blob-service'
+              photoUrlExpirationDate:
+                type: string
+                description: 'Data de expiração da URL da foto do usuário'
+              phoneNumber:
+                type: string
+                description: 'Campo de Telefone (Opcional)'
+              expiredPassword:
+                type: boolean
+                description: 'A senha do usuário está expirada'
+              passwordExpiryAt:
+                type: string
+                description: 'A senha do usuário irá expirar em'
+        404:
+          description: 'Objeto não encontrado'
+        403:
+          description: 'Permissão negada'
+        401:
+          description: 'Usuário ou senha inválido'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /getUser (v8):
+    post:
+      description: 'Retorna as informações básicas do usuário passado como parâmetro. Se o usuário não for informado, retorna os dados do usuário corrente (que efetuou o login)'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - in: header
+          name: accept
+          description: '_MIME type_ e versão do endpoint utilizado na requisição. [SAIBA MAIS](https://dev.senior.com.br/documentacao/guia-de-api/versionamento/).'
+          type: string
+          default: 'application/json;seniorx.version=8'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              username:
+                type: string
+                description: 'Nome do usuário no formato nome@dominio_tenant'
+              includePhoto:
+                type: boolean
+                description: 'Informa se deve trazer a URL da foto do usuário'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - id
+              - username
+              - fullName
+              - email
+              - tenantDomain
+              - tenantName
+              - tenantLocale
+              - blocked
+              - authenticationType
+              - integration
+              - photo
+              - admin
+              - passwordExpirationExempt
+            properties:
+              id:
+                type: string
+                description: 'Identificador do usuário'
+              username:
+                type: string
+                description: 'Nome do usuário'
+              fullName:
+                type: string
+                description: 'Nome completo do usuário'
+              description:
+                type: string
+                description: 'Descrição do usuário'
+              email:
+                type: string
+                description: 'Endereço de e-mail do usuário'
+              locale:
+                type: string
+                description: 'localidade do usuário'
+              tenantDomain:
+                type: string
+                description: 'Domínio do tenant no login do usuário'
+              tenantName:
+                type: string
+                description: 'Nome do tenant do usuário'
+              tenantLocale:
+                type: string
+                description: 'Localidade do tenant do usuário'
+              blocked:
+                type: boolean
+                description: 'Indica se o usuário está bloqueado'
+              authenticationType:
+                $ref: '#/definitions/authType'
+              integration:
+                $ref: '#/definitions/integration'
+              changePassword:
+                type: boolean
+                description: 'Indica se o usuário precisa trocar de senha no próximo logon'
+              photo:
+                type: string
+                description: 'DEPRECADO: Essa propriedade só será retornada na versão descontinuada da primitiva getUser. Utilize a versão atual. Foto do usuário em Base64'
+              properties:
+                $ref: '#/definitions/property'
+              admin:
+                type: boolean
+                description: 'Indica se o usuário é um admin de tenant'
+              allowedToChangePassword:
+                type: boolean
+                description: 'Indica se o usuário pode alterar a sua senha.&#10;É possível alterar a senha quando o tipo de autenticação do tenant é G7 ou quando é G5 e o tenant está configurado para permitir alterar a senha pela G7.'
+              passwordExpirationExempt:
+                type: boolean
+                description: 'Indica se o usuário está isento da política de expiração de senha'
+              expirationDate:
+                type: string
+                description: 'Data de expiração do usuário em UTC.'
+              timezone:
+                type: integer
+                description: 'Timezone em minutos do usuário'
+              photoUrl:
+                type: string
+                description: 'URL da foto do usuário armazenada no blob-service'
+              photoUrlExpirationDate:
+                type: string
+                description: 'Data de expiração da URL da foto do usuário'
+              phoneNumber:
+                type: string
+                description: 'Campo de Telefone (Opcional)'
+              expiredPassword:
+                type: boolean
+                description: 'A senha do usuário está expirada'
+              passwordExpiryAt:
+                type: string
+                description: 'A senha do usuário irá expirar em'
+        404:
+          description: 'Objeto não encontrado'
+        403:
+          description: 'Permissão negada'
+        401:
+          description: 'Usuário ou senha inválido'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: 'Retorna as informações básicas do usuário passado como parâmetro. Se o usuário não for informado, retorna os dados do usuário corrente (que efetuou o login)'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - in: header
+          name: accept
+          description: '_MIME type_ e versão do endpoint utilizado na requisição. [SAIBA MAIS](https://dev.senior.com.br/documentacao/guia-de-api/versionamento/).'
+          type: string
+          default: 'application/json;seniorx.version=8'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              username:
+                type: string
+                description: 'Nome do usuário no formato nome@dominio_tenant'
+              includePhoto:
+                type: boolean
+                description: 'Informa se deve trazer a URL da foto do usuário'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - id
+              - username
+              - fullName
+              - email
+              - tenantDomain
+              - tenantName
+              - tenantLocale
+              - blocked
+              - authenticationType
+              - integration
+              - photo
+              - admin
+              - passwordExpirationExempt
+            properties:
+              id:
+                type: string
+                description: 'Identificador do usuário'
+              username:
+                type: string
+                description: 'Nome do usuário'
+              fullName:
+                type: string
+                description: 'Nome completo do usuário'
+              description:
+                type: string
+                description: 'Descrição do usuário'
+              email:
+                type: string
+                description: 'Endereço de e-mail do usuário'
+              locale:
+                type: string
+                description: 'localidade do usuário'
+              tenantDomain:
+                type: string
+                description: 'Domínio do tenant no login do usuário'
+              tenantName:
+                type: string
+                description: 'Nome do tenant do usuário'
+              tenantLocale:
+                type: string
+                description: 'Localidade do tenant do usuário'
+              blocked:
+                type: boolean
+                description: 'Indica se o usuário está bloqueado'
+              authenticationType:
+                $ref: '#/definitions/authType'
+              integration:
+                $ref: '#/definitions/integration'
+              changePassword:
+                type: boolean
+                description: 'Indica se o usuário precisa trocar de senha no próximo logon'
+              photo:
+                type: string
+                description: 'DEPRECADO: Essa propriedade só será retornada na versão descontinuada da primitiva getUser. Utilize a versão atual. Foto do usuário em Base64'
+              properties:
+                $ref: '#/definitions/property'
+              admin:
+                type: boolean
+                description: 'Indica se o usuário é um admin de tenant'
+              allowedToChangePassword:
+                type: boolean
+                description: 'Indica se o usuário pode alterar a sua senha.&#10;É possível alterar a senha quando o tipo de autenticação do tenant é G7 ou quando é G5 e o tenant está configurado para permitir alterar a senha pela G7.'
+              passwordExpirationExempt:
+                type: boolean
+                description: 'Indica se o usuário está isento da política de expiração de senha'
+              expirationDate:
+                type: string
+                description: 'Data de expiração do usuário em UTC.'
+              timezone:
+                type: integer
+                description: 'Timezone em minutos do usuário'
+              photoUrl:
+                type: string
+                description: 'URL da foto do usuário armazenada no blob-service'
+              photoUrlExpirationDate:
+                type: string
+                description: 'Data de expiração da URL da foto do usuário'
+              phoneNumber:
+                type: string
+                description: 'Campo de Telefone (Opcional)'
+              expiredPassword:
+                type: boolean
+                description: 'A senha do usuário está expirada'
+              passwordExpiryAt:
+                type: string
+                description: 'A senha do usuário irá expirar em'
+        404:
+          description: 'Objeto não encontrado'
+        403:
+          description: 'Permissão negada'
+        401:
+          description: 'Usuário ou senha inválido'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /updateGroup:
+    post:
+      description: 'Atualiza as informações e os usuários de um grupo'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - id
+            properties:
+              id:
+                type: string
+                description: 'Identificador do grupo'
+              name:
+                type: string
+                description: 'Nome do grupo'
+              description:
+                type: string
+                description: 'Descrição do grupo'
+              email:
+                type: string
+                description: 'E-mail do grupo'
+              usersToAdd:
+                type: array
+                items:
+                  type: string
+                description: 'Usuários a serem incluídos no grupo'
+              usersToRemove:
+                type: array
+                items:
+                  type: string
+                description: 'Usuários a serem excluídos do grupo'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - id
+            properties:
+              id:
+                type: string
+                description: 'Identificador do grupo que foi atualizado'
+        404:
+          description: 'Objeto não encontrado'
+        403:
+          description: 'Permissão negada'
+        401:
+          description: 'Usuário ou senha inválido'
+        400:
+          description: 'Requisição inválida, parâmetros obrigatórios não informados ou campo informado incorretamente'
+        409:
+          description: 'Objeto já existente'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /listImpersonationHistory:
+    post:
+      description: 'Retorna o histório de personificação com base nos parâmetros informados'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              pagination:
+                $ref: '#/definitions/pagination'
+              impersonatedUsername:
+                type: string
+                description: 'Username do usuário solicitante da personificação'
+              tenant:
+                type: string
+                description: 'Nome do tenant'
+              from:
+                type: string
+                description: 'Data inicial'
+              to:
+                type: string
+                description: 'Data final'
+              status:
+                $ref: '#/definitions/impersonationStatus'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - content
+              - listInformation
+            properties:
+              content:
+                $ref: '#/definitions/impersonationHistory'
+              listInformation:
+                $ref: '#/definitions/listInformation'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: 'Retorna o histório de personificação com base nos parâmetros informados'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              pagination:
+                $ref: '#/definitions/pagination'
+              impersonatedUsername:
+                type: string
+                description: 'Username do usuário solicitante da personificação'
+              tenant:
+                type: string
+                description: 'Nome do tenant'
+              from:
+                type: string
+                description: 'Data inicial'
+              to:
+                type: string
+                description: 'Data final'
+              status:
+                $ref: '#/definitions/impersonationStatus'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - content
+              - listInformation
+            properties:
+              content:
+                $ref: '#/definitions/impersonationHistory'
+              listInformation:
+                $ref: '#/definitions/listInformation'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /synchronizeLDAPUsers:
+    post:
+      description: 'Efetua a sincronização dos usuários entre o servidor LDAP e a base local'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              tenantName:
+                type: string
+                description: 'Nome do tenant'
+      responses:
+        200:
+          description: 'Ok'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /getUsersByAuthenticationDashboard:
+    post:
+      description: 'Query para o dashboard de autenticação. Objetivo é retornar a quantidade de usuários por tipo de autenticação'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              authenticationType:
+                type: array
+                items:
+                  $ref: '#/definitions/authType'
+                description: 'Tipo de autenticação'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - totalUsers
+            properties:
+              totalUsers:
+                type: integer
+                description: ''
+              result:
+                $ref: '#/definitions/authenticationDashboard'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: 'Query para o dashboard de autenticação. Objetivo é retornar a quantidade de usuários por tipo de autenticação'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              authenticationType:
+                type: array
+                items:
+                  $ref: '#/definitions/authType'
+                description: 'Tipo de autenticação'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - totalUsers
+            properties:
+              totalUsers:
+                type: integer
+                description: ''
+              result:
+                $ref: '#/definitions/authenticationDashboard'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /generatePasswordChangeToken:
+    post:
+      description: 'Gera um token temporário para troca de senha'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - username
+            properties:
+              username:
+                type: string
+                description: 'Nome do usuário'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - token
+            properties:
+              token:
+                type: string
+                description: 'Token temporário para troca de senha'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /getAdminInfo:
+    post:
+      description: 'Retorna as informações do administrador do tenant com base no contexto'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - domainName
+              - password
+              - email
+              - firstName
+            properties:
+              domainName:
+                type: string
+                description: 'Nome do domínio'
+              password:
+                type: string
+                description: 'Senha'
+              email:
+                type: string
+                description: 'E-mail'
+              firstName:
+                type: string
+                description: 'Nome'
+              lastName:
+                type: string
+                description: 'Sobrenome'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: 'Retorna as informações do administrador do tenant com base no contexto'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - domainName
+              - password
+              - email
+              - firstName
+            properties:
+              domainName:
+                type: string
+                description: 'Nome do domínio'
+              password:
+                type: string
+                description: 'Senha'
+              email:
+                type: string
+                description: 'E-mail'
+              firstName:
+                type: string
+                description: 'Nome'
+              lastName:
+                type: string
+                description: 'Sobrenome'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /updateGroupUsers:
+    post:
+      description: 'Adiciona e/ou remove usuários de um grupo'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - groupId
+            properties:
+              usersToAdd:
+                type: array
+                items:
+                  type: string
+                description: 'Lista de usuários que serão incluídos'
+              usersToRemove:
+                type: array
+                items:
+                  type: string
+                description: 'Lista de usuários que serão removidos'
+              groupId:
+                type: string
+                description: 'Identificador do Grupo'
+      responses:
+        200:
+          description: 'Ok'
+        404:
+          description: 'Objeto não encontrado'
+        403:
+          description: 'Permissão negada'
+        401:
+          description: 'Usuário ou senha inválido'
+        400:
+          description: 'Requisição inválida, parâmetros obrigatórios não informados ou campo informado incorretamente'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /anonymous/requestPasswordChange:
+    post:
+      description: 'Envia um e-mail para o usuário, com as instruções para troca de senha'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - in: header
+          name: X-Tenant
+          description: 'Nome do tenant'
+          type: string
+        - in: header
+          name: X-TenantDomain
+          description: 'Domínio tenant'
+          type: string
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - username
+              - baseURL
+            properties:
+              username:
+                type: string
+                description: 'Nome do usuário, no formato nome@dominio_tenant, por exemplo: joao@senior.com.br'
+              baseURL:
+                type: string
+                description: 'Endereço base da página de troca de senha, que será enviado ao usuário via e-mail'
+              captcha:
+                type: string
+                description: 'Resposta do captcha para liberar a operação - é desnecessário ou obrigatório, dependendo da configuração do ambiente'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - recipient
+            properties:
+              recipient:
+                type: string
+                description: 'Endereço de e-mail ofuscado, para qual foi enviada as instruções de troca de senha'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /impersonate:
+    post:
+      description: 'Personificar usuário'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - username
+            properties:
+              username:
+                type: string
+                description: 'Username do usuário que será personificado'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - token
+            properties:
+              token:
+                type: string
+                description: 'Retorna o token para personificação'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /listUsersToImpersonate:
+    post:
+      description: 'Obtém a lista de todos os usuário disponíveis para personificação, sendo possível filtrar por nome de usuário e tenant'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              searchValue:
+                type: string
+                description: 'O valor a ser pesquisado no nome do usuário e tenant'
+              includeImpersonated:
+                type: boolean
+                description: 'Inclui usuários que já foram personificados'
+              pagination:
+                $ref: '#/definitions/pagination'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - impersonationUsers
+              - listInformation
+            properties:
+              impersonationUsers:
+                $ref: '#/definitions/impersonationUser'
+              listInformation:
+                $ref: '#/definitions/listInformation'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: 'Obtém a lista de todos os usuário disponíveis para personificação, sendo possível filtrar por nome de usuário e tenant'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              searchValue:
+                type: string
+                description: 'O valor a ser pesquisado no nome do usuário e tenant'
+              includeImpersonated:
+                type: boolean
+                description: 'Inclui usuários que já foram personificados'
+              pagination:
+                $ref: '#/definitions/pagination'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - impersonationUsers
+              - listInformation
+            properties:
+              impersonationUsers:
+                $ref: '#/definitions/impersonationUser'
+              listInformation:
+                $ref: '#/definitions/listInformation'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /revokeImpersonation:
+    post:
+      description: 'Revoga a solicitação da personificação do usuário do contexto'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+      responses:
+        200:
+          description: 'Ok'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /getUserPhoto:
+    post:
+      description: 'Retorna a URL da foto do usuário, armazenada no blob-service.'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              username:
+                type: string
+                description: 'Nome do usuário no formato nome@dominio_tenant'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - url
+              - urlExpirationDate
+            properties:
+              url:
+                type: string
+                description: 'URL da foto do usuário'
+              urlExpirationDate:
+                type: string
+                description: 'Data de expiração da URL da foto do usuário'
+        404:
+          description: 'Objeto não encontrado'
+        403:
+          description: 'Permissão negada'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: 'Retorna a URL da foto do usuário, armazenada no blob-service.'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              username:
+                type: string
+                description: 'Nome do usuário no formato nome@dominio_tenant'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - url
+              - urlExpirationDate
+            properties:
+              url:
+                type: string
+                description: 'URL da foto do usuário'
+              urlExpirationDate:
+                type: string
+                description: 'Data de expiração da URL da foto do usuário'
+        404:
+          description: 'Objeto não encontrado'
+        403:
+          description: 'Permissão negada'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /listUserGroups:
+    post:
+      description: 'Obtem a lista de grupos do usuário'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - username
+            properties:
+              username:
+                type: string
+                description: 'Nome do usuário'
+              searchValue:
+                type: string
+                description: 'Termo para buscar nos campos nome e e-mail.'
+              pagination:
+                $ref: '#/definitions/pagination'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - groups
+              - listInformation
+            properties:
+              groups:
+                $ref: '#/definitions/group'
+              listInformation:
+                $ref: '#/definitions/listInformation'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: 'Obtem a lista de grupos do usuário'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - username
+            properties:
+              username:
+                type: string
+                description: 'Nome do usuário'
+              searchValue:
+                type: string
+                description: 'Termo para buscar nos campos nome e e-mail.'
+              pagination:
+                $ref: '#/definitions/pagination'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - groups
+              - listInformation
+            properties:
+              groups:
+                $ref: '#/definitions/group'
+              listInformation:
+                $ref: '#/definitions/listInformation'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /createGroup:
+    post:
+      description: 'Insere um novo grupo na base'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - name
+            properties:
+              name:
+                type: string
+                description: 'Nome do grupo'
+              description:
+                type: string
+                description: 'Descrição do grupo'
+              email:
+                type: string
+                description: 'E-mail do grupo'
+              users:
+                type: array
+                items:
+                  type: string
+                description: 'Lista de usuários a serem associados ao grupo'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - id
+            properties:
+              id:
+                type: string
+                description: 'Identificador do grupo que foi inserido na base'
+        403:
+          description: 'Permissão negada'
+        401:
+          description: 'Usuário ou senha inválido'
+        400:
+          description: 'Requisição inválida, parâmetros obrigatórios não informados ou campo informado incorretamente'
+        409:
+          description: 'Objeto já existente'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /listUsersByIds:
+    post:
+      description: 'Obtem a lista de usuários pelos ids'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - userIds
+            properties:
+              tenantName:
+                type: string
+                description: 'Tenant que deseja buscar os usuários, apenas permitido para master'
+              userIds:
+                type: array
+                items:
+                  type: string
+                description: 'Ids dos usuários.'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            properties:
+              users:
+                $ref: '#/definitions/basicUser'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: 'Obtem a lista de usuários pelos ids'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - userIds
+            properties:
+              tenantName:
+                type: string
+                description: 'Tenant que deseja buscar os usuários, apenas permitido para master'
+              userIds:
+                type: array
+                items:
+                  type: string
+                description: 'Ids dos usuários.'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            properties:
+              users:
+                $ref: '#/definitions/basicUser'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /updateUser:
+    post:
+      description: 'Altera as informações de um usuário'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              username:
+                type: string
+                description: 'Nome do usuário'
+              fullName:
+                type: string
+                description: 'Nome completo do usuário'
+              email:
+                type: string
+                description: 'Endereço de e-mail do usuário'
+              description:
+                type: string
+                description: 'Descrição do usuário'
+              locale:
+                type: string
+                description: 'Idioma preferêncial do usuário'
+              photo:
+                type: string
+                description: 'Foto do usuário em Base64'
+              blocked:
+                type: boolean
+                description: 'Indica se o usuário está bloqueado'
+              changePassword:
+                type: boolean
+                description: 'Indica se o usuário precisa trocar de senha no próximo logon'
+              properties:
+                type: array
+                items:
+                  $ref: '#/definitions/property'
+                description: 'Lista com as propriedades que este usuário possui (opcional)'
+              phoneNumber:
+                type: string
+                description: 'Campo informativo para numero de telefone do usuário (opcional)'
+              passwordExpirationExempt:
+                type: boolean
+                description: 'Indica se o usuário está isento da política de expiração de senha'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - username
+            properties:
+              username:
+                type: string
+                description: 'Nome do usuário que foi atualizado'
+        404:
+          description: 'Objeto não encontrado'
+        403:
+          description: 'Permissão negada'
+        401:
+          description: 'Usuário ou senha inválido'
+        400:
+          description: 'Requisição inválida, parâmetros obrigatórios não informados ou campo informado incorretamente'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /updateUser (v10):
+    post:
+      description: 'Altera as informações de um usuário. Para remover uma informação é necessário passar o campo com o valor vazio, se o campo não&#10;for passado a informação não será alterada.'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - in: header
+          name: accept
+          description: '_MIME type_ e versão do endpoint utilizado na requisição. [SAIBA MAIS](https://dev.senior.com.br/documentacao/guia-de-api/versionamento/).'
+          type: string
+          default: 'application/json;seniorx.version=10'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              username:
+                type: string
+                description: 'Nome do usuário'
+              fullName:
+                type: string
+                description: 'Nome completo do usuário'
+              email:
+                type: string
+                description: 'Endereço de e-mail do usuário'
+              description:
+                type: string
+                description: 'Descrição do usuário'
+              locale:
+                type: string
+                description: 'Idioma preferêncial do usuário'
+              photo:
+                type: string
+                description: 'Foto do usuário em Base64'
+              blocked:
+                type: boolean
+                description: 'Indica se o usuário está bloqueado'
+              changePassword:
+                type: boolean
+                description: 'Indica se o usuário precisa trocar de senha no próximo logon'
+              properties:
+                type: array
+                items:
+                  $ref: '#/definitions/property'
+                description: 'Lista com as propriedades que este usuário possui (opcional)'
+              phoneNumber:
+                type: string
+                description: 'Campo informativo para numero de telefone do usuário (opcional)'
+              passwordExpirationExempt:
+                type: boolean
+                description: 'Indica se o usuário está isento da política de expiração de senha'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - username
+            properties:
+              username:
+                type: string
+                description: 'Nome do usuário que foi atualizado'
+        404:
+          description: 'Objeto não encontrado'
+        403:
+          description: 'Permissão negada'
+        401:
+          description: 'Usuário ou senha inválido'
+        400:
+          description: 'Requisição inválida, parâmetros obrigatórios não informados ou campo informado incorretamente'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /getUserImpersonation:
+    post:
+      description: 'Retorna informações do usuário da personificação do contexto'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            properties:
+              impersonation:
+                $ref: '#/definitions/impersonationUser'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: 'Retorna informações do usuário da personificação do contexto'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            properties:
+              impersonation:
+                $ref: '#/definitions/impersonationUser'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /listUsersByNames:
+    post:
+      description: 'Obtem a lista de usuários pelos nomes'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - userNames
+            properties:
+              tenantName:
+                type: string
+                description: 'Tenant que deseja buscar os usuários, apenas permitido para master'
+              userNames:
+                type: array
+                items:
+                  type: string
+                description: 'Nomes dos usuários.'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            properties:
+              users:
+                $ref: '#/definitions/basicUser'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: 'Obtem a lista de usuários pelos nomes'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - userNames
+            properties:
+              tenantName:
+                type: string
+                description: 'Tenant que deseja buscar os usuários, apenas permitido para master'
+              userNames:
+                type: array
+                items:
+                  type: string
+                description: 'Nomes dos usuários.'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            properties:
+              users:
+                $ref: '#/definitions/basicUser'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /changePassword:
+    post:
+      description: 'Atualiza a senha de um usuário&#10;Essa primitiva possui campos de senha criptografados, o que pode impossibilitar a customização da API'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - newPassword
+            properties:
+              username:
+                type: string
+                description: 'Nome do usuário'
+              currentPassword:
+                type: string
+                description: 'Senha atual do usuário'
+              newPassword:
+                type: string
+                description: 'Nova senha do usuário'
+      responses:
+        200:
+          description: 'Ok'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /anonymous/changePasswordWithToken:
+    post:
+      description: 'Faz a troca da senha do usuário, autorizada através do token passado&#10;Essa primitiva possui campos de senha criptografados, o que pode impossibilitar a customização da API'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - in: header
+          name: X-Tenant
+          description: 'Nome do tenant'
+          type: string
+        - in: header
+          name: X-TenantDomain
+          description: 'Domínio tenant'
+          type: string
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - token
+              - username
+              - newPassword
+            properties:
+              token:
+                type: string
+                description: 'Token enviado para o usuário via e-mail, através da ação &#39;generatePasswordChangeToken&#39; ou &#39;requestPasswordChange&#39;'
+              username:
+                type: string
+                description: 'Nome do usuário'
+              newPassword:
+                type: string
+                description: 'Nova Senha para o usuário. Esta senha deve respeitar as políticas de senha definidas para o tenant do qual o usuário faz parte'
+      responses:
+        200:
+          description: 'Ok'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /getG7UsersPasswordExpirationDashboard:
+    post:
+      description: 'Query para o dashboard de expiração de senha dos usuários G7. Objetivo é retornar a quantidade de usuários configurados para não expirar senha. Se o tenant não possuir a política de expiração de senha ativa, o total de usuários será 0'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - totalUsersG7
+              - totalUsersDisabledPasswordExempt
+            properties:
+              totalUsersG7:
+                type: integer
+                description: ''
+              totalUsersDisabledPasswordExempt:
+                type: integer
+                description: ''
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: 'Query para o dashboard de expiração de senha dos usuários G7. Objetivo é retornar a quantidade de usuários configurados para não expirar senha. Se o tenant não possuir a política de expiração de senha ativa, o total de usuários será 0'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - totalUsersG7
+              - totalUsersDisabledPasswordExempt
+            properties:
+              totalUsersG7:
+                type: integer
+                description: ''
+              totalUsersDisabledPasswordExempt:
+                type: integer
+                description: ''
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /listGroupUsers:
+    post:
+      description: 'Obtém a lista dos usuários do grupo'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - id
+            properties:
+              id:
+                type: string
+                description: 'Identificador do grupo.'
+              searchValue:
+                type: string
+                description: 'Termo para buscar nos campos nome, nome completo e e-mail.'
+              pagination:
+                $ref: '#/definitions/pagination'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - users
+              - listInformation
+            properties:
+              users:
+                $ref: '#/definitions/groupBasicUser'
+              listInformation:
+                $ref: '#/definitions/listInformation'
+        404:
+          description: 'Objeto não encontrado'
+        403:
+          description: 'Permissão negada'
+        401:
+          description: 'Usuário ou senha inválido'
+        400:
+          description: 'Requisição inválida, parâmetros obrigatórios não informados ou campo informado incorretamente'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: 'Obtém a lista dos usuários do grupo'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - id
+            properties:
+              id:
+                type: string
+                description: 'Identificador do grupo.'
+              searchValue:
+                type: string
+                description: 'Termo para buscar nos campos nome, nome completo e e-mail.'
+              pagination:
+                $ref: '#/definitions/pagination'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - users
+              - listInformation
+            properties:
+              users:
+                $ref: '#/definitions/groupBasicUser'
+              listInformation:
+                $ref: '#/definitions/listInformation'
+        404:
+          description: 'Objeto não encontrado'
+        403:
+          description: 'Permissão negada'
+        401:
+          description: 'Usuário ou senha inválido'
+        400:
+          description: 'Requisição inválida, parâmetros obrigatórios não informados ou campo informado incorretamente'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /removeGroup:
+    post:
+      description: 'Remove o grupo e os vínculos dos usuários'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - id
+            properties:
+              id:
+                type: string
+                description: 'Identificador do grupo'
+      responses:
+        200:
+          description: 'Ok'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /listUsers:
+    post:
+      description: 'Obtem a lista de usuários'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              tenant:
+                type: string
+                description: 'Tenant que deseja buscar os usuários, apenas permitido para master'
+              pagination:
+                $ref: '#/definitions/pagination'
+              ordination:
+                $ref: '#/definitions/ordination'
+              includeBlocked:
+                type: boolean
+                description: 'Incluir usuários bloqueados, por padrão será true'
+              onlyPasswordExpirationExempt:
+                type: boolean
+                description: 'Incluir apenas usuários que estão isentos da expiração de senha, por padrão será false'
+              searchTerm:
+                type: string
+                description: 'Termo para buscar nos campos nome, nome completo, celular e e-mail'
+              users:
+                type: array
+                items:
+                  type: string
+                description: 'Lista de usuários específicos (campo name, e-mail, cell_phone, fullName) para filtrar somente os dados destes'
+              authenticationTypes:
+                type: array
+                items:
+                  $ref: '#/definitions/authType'
+                description: 'Tipos de autenticação'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - users
+              - listInformation
+              - passwordExpirationActive
+            properties:
+              users:
+                $ref: '#/definitions/basicUser'
+              listInformation:
+                $ref: '#/definitions/listInformation'
+              passwordExpirationActive:
+                type: boolean
+                description: 'Indica se o tenant tem a política de expiração de senha ativa'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: 'Obtem a lista de usuários'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              tenant:
+                type: string
+                description: 'Tenant que deseja buscar os usuários, apenas permitido para master'
+              pagination:
+                $ref: '#/definitions/pagination'
+              ordination:
+                $ref: '#/definitions/ordination'
+              includeBlocked:
+                type: boolean
+                description: 'Incluir usuários bloqueados, por padrão será true'
+              onlyPasswordExpirationExempt:
+                type: boolean
+                description: 'Incluir apenas usuários que estão isentos da expiração de senha, por padrão será false'
+              searchTerm:
+                type: string
+                description: 'Termo para buscar nos campos nome, nome completo, celular e e-mail'
+              users:
+                type: array
+                items:
+                  type: string
+                description: 'Lista de usuários específicos (campo name, e-mail, cell_phone, fullName) para filtrar somente os dados destes'
+              authenticationTypes:
+                type: array
+                items:
+                  $ref: '#/definitions/authType'
+                description: 'Tipos de autenticação'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - users
+              - listInformation
+              - passwordExpirationActive
+            properties:
+              users:
+                $ref: '#/definitions/basicUser'
+              listInformation:
+                $ref: '#/definitions/listInformation'
+              passwordExpirationActive:
+                type: boolean
+                description: 'Indica se o tenant tem a política de expiração de senha ativa'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /getGroup:
+    post:
+      description: 'Retorna as informações de um grupo'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              id:
+                type: string
+                description: 'Identificador do grupo'
+              name:
+                type: string
+                description: 'Nome do grupo'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - id
+              - name
+            properties:
+              id:
+                type: string
+                description: 'Identificador do Grupo'
+              name:
+                type: string
+                description: 'Nome do Grupo'
+              description:
+                type: string
+                description: 'Descrição do Grupo'
+              email:
+                type: string
+                description: 'E-mail do grupo'
+              users:
+                $ref: '#/definitions/groupBasicUser'
+        404:
+          description: 'Objeto não encontrado'
+        403:
+          description: 'Permissão negada'
+        401:
+          description: 'Usuário ou senha inválido'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: 'Retorna as informações de um grupo'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              id:
+                type: string
+                description: 'Identificador do grupo'
+              name:
+                type: string
+                description: 'Nome do grupo'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - id
+              - name
+            properties:
+              id:
+                type: string
+                description: 'Identificador do Grupo'
+              name:
+                type: string
+                description: 'Nome do Grupo'
+              description:
+                type: string
+                description: 'Descrição do Grupo'
+              email:
+                type: string
+                description: 'E-mail do grupo'
+              users:
+                $ref: '#/definitions/groupBasicUser'
+        404:
+          description: 'Objeto não encontrado'
+        403:
+          description: 'Permissão negada'
+        401:
+          description: 'Usuário ou senha inválido'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /deleteUser:
+    post:
+      description: 'Exclui o usuário da base'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - username
+            properties:
+              username:
+                type: string
+                description: 'Username do usuário que será excluído'
+      responses:
+        200:
+          description: 'Ok'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /listGroups:
+    post:
+      description: 'Obtém a lista de todos os grupos'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              searchValue:
+                type: string
+                description: 'O valor a ser pesquisado no nome do grupo'
+              tenant:
+                type: string
+                description: 'Tenant que deseja buscar os grupos, apenas permitido para master'
+              pagination:
+                $ref: '#/definitions/pagination'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - groups
+              - listInformation
+            properties:
+              groups:
+                $ref: '#/definitions/group'
+              listInformation:
+                $ref: '#/definitions/listInformation'
+        403:
+          description: 'Permissão negada'
+        401:
+          description: 'Usuário ou senha inválido'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: 'Obtém a lista de todos os grupos'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              searchValue:
+                type: string
+                description: 'O valor a ser pesquisado no nome do grupo'
+              tenant:
+                type: string
+                description: 'Tenant que deseja buscar os grupos, apenas permitido para master'
+              pagination:
+                $ref: '#/definitions/pagination'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - groups
+              - listInformation
+            properties:
+              groups:
+                $ref: '#/definitions/group'
+              listInformation:
+                $ref: '#/definitions/listInformation'
+        403:
+          description: 'Permissão negada'
+        401:
+          description: 'Usuário ou senha inválido'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /createUser:
+    post:
+      description: 'Insere um novo usuário na base'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - username
+              - fullName
+              - email
+              - password
+              - blocked
+              - changePassword
+            properties:
+              username:
+                type: string
+                description: 'Nome (username) do usuário'
+              fullName:
+                type: string
+                description: 'Nome completo do usuário'
+              email:
+                type: string
+                description: 'Endereço de e-mail do usuário'
+              password:
+                type: string
+                description: 'Senha do usuário'
+              description:
+                type: string
+                description: 'Descrição do usuário (opcional)'
+              blocked:
+                type: boolean
+                description: 'Indica se o usuário está ou não bloqueado'
+              changePassword:
+                type: boolean
+                description: 'Indica se o usuário precisa trocar a senha no próximo logon'
+              photo:
+                type: string
+                description: 'Foto do usuário, em Base64. (opcional)'
+              locale:
+                type: string
+                description: 'Localidade do usuário'
+              properties:
+                type: array
+                items:
+                  $ref: '#/definitions/property'
+                description: 'Lista com as propriedades que este usuário possui (opcional)'
+              phoneNumber:
+                type: string
+                description: 'Campo informativo para numero de telefone do usuário (opcional)'
+              roles:
+                type: array
+                items:
+                  type: string
+                description: 'Lista com os nomes dos papéis associados a este usuário'
+              passwordExpirationExempt:
+                type: boolean
+                description: 'Indica se o usuário está isento da política de expiração de senha'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - username
+            properties:
+              username:
+                type: string
+                description: 'Nome do usuário recém criado'
+        401:
+          description: 'Usuário ou senha inválido'
+        400:
+          description: 'Requisição inválida, parâmetros obrigatórios não informados ou campo informado incorretamente'
+        409:
+          description: 'Objeto já existente'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /alterAuthenticationTypeAllUsers:
+    post:
+      description: 'Altera o tipo de autenticação de todos os usuários'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Signals
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - currentAuthenticationType
+              - newAuthenticationType
+            properties:
+              currentAuthenticationType:
+                $ref: '#/definitions/authType'
+              newAuthenticationType:
+                $ref: '#/definitions/authType'
+      responses:
+        200:
+          description: 'Ok'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /deleteUsers:
+    post:
+      description: 'Exclui os usuários da base'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Signals
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - usernames
+            properties:
+              usernames:
+                type: array
+                items:
+                  type: string
+                description: 'Lista de usernames dos usuários que serão excluídos'
+      responses:
+        200:
+          description: 'Ok'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /listUsersAlterTypeAuthentication:
+    post:
+      description: 'Recebe uma lista de usuários que irá ter o tipo de autenticação alterado.'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Signals
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - currentAuthenticationType
+              - newAuthenticationType
+              - users
+            properties:
+              currentAuthenticationType:
+                $ref: '#/definitions/authType'
+              newAuthenticationType:
+                $ref: '#/definitions/authType'
+              users:
+                type: array
+                items:
+                  type: string
+                description: 'Lista de usuários que irá ter o tipo de autenticação alterada'
+      responses:
+        200:
+          description: 'Ok'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /blockUnblockUsers:
+    post:
+      description: 'Bloquear/Desbloquear uma lista de usuários'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Signals
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              blockUsers:
+                type: array
+                items:
+                  type: string
+                description: 'Lista de usernames a serem bloqueados'
+              unblockUsers:
+                type: array
+                items:
+                  type: string
+                description: 'Lista de usernames a serem desbloqueados'
+      responses:
+        200:
+          description: 'Ok'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /usersChanged:
+    post:
+      description: 'Informa que usuários foram alterados'
+      x-senior-event: true
+      deprecated: false
+      tags:
+        - Events
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - created
+              - updated
+              - deleted
+            properties:
+              created:
+                type: array
+                items:
+                  $ref: '#/definitions/changedUser'
+                description: 'Usuários criados.'
+              updated:
+                type: array
+                items:
+                  $ref: '#/definitions/changedUser'
+                description: 'Usuários alterados.'
+              deleted:
+                type: array
+                items:
+                  type: string
+                description: 'Usuários excluídos.'
+      responses:
+        200:
+          description: 'Ok'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /adminUserChanged:
+    post:
+      description: 'Informa que um usuário administrador de um tenant foi alterado'
+      x-senior-event: true
+      deprecated: false
+      tags:
+        - Events
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - tenantName
+              - fullName
+              - email
+            properties:
+              tenantName:
+                type: string
+                description: 'Nome do tenant alterado'
+              fullName:
+                type: string
+                description: 'Nome alterado do administador do tenant.'
+              email:
+                type: string
+                description: 'e-mail alterado do administador do tenant.'
+      responses:
+        200:
+          description: 'Ok'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /groupChanged:
+    post:
+      description: 'Informa que um grupo foi alterado'
+      x-senior-event: true
+      deprecated: false
+      tags:
+        - Events
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - id
+              - name
+            properties:
+              id:
+                type: string
+                description: 'Identificador do grupo'
+              name:
+                type: string
+                description: 'Nome do grupo'
+              oldName:
+                type: string
+                description: 'Nome antigo do grupo se alterado'
+              description:
+                type: string
+                description: 'Descrição do grupo'
+              email:
+                type: string
+                description: 'E-mail do grupo'
+              usersIncluded:
+                type: array
+                items:
+                  type: string
+                description: 'Nome dos usuários que foram incluídos no grupo, com domínio (&lt;usuário&gt;@&lt;domínio.com&gt;)'
+              usersRemoved:
+                type: array
+                items:
+                  type: string
+                description: 'Nome dos usuários que foram removidos do grupo, com domínio (&lt;usuário&gt;@&lt;domínio.com&gt;)'
+              groupCreated:
+                type: boolean
+                description: 'Indica se o grupo é novo ou foi alterado'
+      responses:
+        200:
+          description: 'Ok'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /groupRemoved:
+    post:
+      description: 'Informa que um grupo foi removido'
+      x-senior-event: true
+      deprecated: false
+      tags:
+        - Events
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - id
+              - name
+            properties:
+              id:
+                type: string
+                description: 'Identificador do grupo'
+              name:
+                type: string
+                description: 'Nome do grupo'
+      responses:
+        200:
+          description: 'Ok'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /changedIntegrator:
+    post:
+      description: 'Notifica uma alteração no integrador'
+      x-senior-event: true
+      deprecated: false
+      tags:
+        - Events
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - tenant
+              - integrator
+            properties:
+              tenant:
+                type: string
+                description: 'Nome do tenant'
+              integrator:
+                type: string
+                description: 'Integrador exemplo: domain/service/&lt;identifier&gt;'
+      responses:
+        200:
+          description: 'Ok'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /userPasswordChanged:
+    post:
+      description: 'Notifica que um usuário teve a senha alterada'
+      x-senior-event: true
+      deprecated: false
+      tags:
+        - Events
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - username
+              - authType
+            properties:
+              username:
+                type: string
+                description: 'Nome do usuário'
+              authType:
+                $ref: '#/definitions/authType'
+      responses:
+        200:
+          description: 'Ok'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+
+
+
+definitions:
+
+  impersonationStatus:
+    type: string
+    enum:
+      - "GENERATED"
+      - "IMPERSONATED"
+      - "REVOKED"
+      - "USER_REVOKED"
+      - "EXPIRED"
+
+  authType:
+    type: string
+    enum:
+      - "G7"
+      - "G5"
+      - "LDAP"
+      - "SAML"
+
+  sortOrder:
+    type: string
+    enum:
+      - "DESC"
+      - "ASC"
+
+  criticality:
+    type: string
+    enum:
+      - "HIGH_1"
+      - "MEDIUM_2"
+      - "LOW_3"
+
+  impersonationUser:
+    type: object
+    required:
+      - username
+      - tenant
+      - created
+      - impersonated
+    properties:
+        username:
+          type: string
+          description: 'Nome do usuário passível de personificação'
+        tenant:
+          type: string
+          description: 'Tenant do usuário em questão'
+        created:
+          type: string
+          description: 'Data em que o usuário se submeteu a personificação'
+          format: "date-time"
+        impersonated:
+          type: boolean
+          description: 'Indica se o usuário já foi personificado'
+
+  impersonationHistory:
+    type: object
+    required:
+      - tenant
+      - impersonatedUsername
+      - impersonatorUsername
+      - created
+      - status
+    properties:
+        tenant:
+          type: string
+          description: 'Nome do tenant'
+        impersonatedUsername:
+          type: string
+          description: 'Username do usuário solicitante do atendimento'
+        impersonatorUsername:
+          type: string
+          description: 'Username do usuário que atendeu a solicitação do atendimento'
+        created:
+          type: string
+          description: 'Data e hora que ocorreu o evento'
+          format: "date-time"
+        status:
+          $ref: '#/definitions/impersonationStatus'
+
+  pagination:
+    type: object
+    properties:
+        pageNumber:
+          type: integer
+          description: 'O número da página retornado. A primeira página corresponde ao índice 0'
+        pageSize:
+          type: integer
+          description: 'Quantidade de registros por página'
+
+  ordination:
+    type: object
+    properties:
+        sortBy:
+          type: string
+          description: 'Nome do campo pelo qual resultado será ordenado.'
+        sortOrder:
+          $ref: '#/definitions/sortOrder'
+
+  listInformation:
+    type: object
+    required:
+      - totalElements
+      - totalPages
+    properties:
+        totalElements:
+          type: integer
+          description: 'Quantidade total de resultados encontrados'
+        totalPages:
+          type: integer
+          description: 'Quantidade total de páginas encontradas'
+
+  group:
+    type: object
+    required:
+      - id
+      - name
+    properties:
+        id:
+          type: string
+          description: 'Identificador do Grupo'
+        name:
+          type: string
+          description: 'Nome do Grupo'
+        description:
+          type: string
+          description: 'Descrição do Grupo'
+        email:
+          type: string
+          description: 'E-mail do grupo'
+
+  property:
+    type: object
+    required:
+      - name
+      - value
+    properties:
+        name:
+          type: string
+          description: 'Nome da propriedade'
+        value:
+          type: string
+          description: 'Valor da propriedade'
+
+  groupBasicUser:
+    type: object
+    required:
+      - username
+      - fullName
+      - email
+      - blocked
+      - authenticationType
+    properties:
+        username:
+          type: string
+          description: 'Nome do Usuário'
+        fullName:
+          type: string
+          description: 'Nome completo do usuário'
+        email:
+          type: string
+          description: 'Endereço de e-mail do usuário'
+        blocked:
+          type: boolean
+          description: 'Indica se o usuário está bloqueado'
+        authenticationType:
+          $ref: '#/definitions/authType'
+
+  basicUser:
+    type: object
+    required:
+      - id
+      - username
+      - fullName
+      - email
+      - tenantDomain
+      - tenantName
+      - tenantLocale
+      - blocked
+      - authenticationType
+      - integration
+    properties:
+        id:
+          type: string
+          description: 'Identificador do usuário'
+        username:
+          type: string
+          description: 'Nome do usuário'
+        fullName:
+          type: string
+          description: 'Nome completo do usuário'
+        description:
+          type: string
+          description: 'Descrição do usuário'
+        email:
+          type: string
+          description: 'Endereço de e-mail do usuário'
+        locale:
+          type: string
+          description: 'localidade do usuário'
+        tenantDomain:
+          type: string
+          description: 'Domínio do tenant no login do usuário'
+        tenantName:
+          type: string
+          description: 'Nome do tenant do usuário'
+        tenantLocale:
+          type: string
+          description: 'Localidade do tenant do usuário'
+        blocked:
+          type: boolean
+          description: 'Indica se o usuário está bloqueado'
+        authenticationType:
+          $ref: '#/definitions/authType'
+        integration:
+          $ref: '#/definitions/integration'
+
+  integration:
+    type: object
+    required:
+      - integrationName
+      - authType
+    properties:
+        integrationName:
+          type: string
+          description: 'Nome do usuário recebido via integração, caso não tenha um usuário informado na coluna &#39;integration_username&#39; será retornado o usuário padrão'
+        integrationCode:
+          type: string
+          description: 'Código do usuário, aplicado para os usuários integrados através da G5'
+        authType:
+          $ref: '#/definitions/authType'
+
+  changedUser:
+    type: object
+    required:
+      - username
+      - blocked
+    properties:
+        username:
+          type: string
+          description: 'Nome do usuário, com domínio (&lt;usuário&gt;@&lt;dominio.com&gt;)'
+        fullName:
+          type: string
+          description: 'Nome completo do usuário'
+        blocked:
+          type: boolean
+          description: 'Indicativo se o usuário está bloqueado'
+        rolesToBeAssigned:
+          type: array
+          items:
+            type: string
+          description: 'Papeis a serem atribuídos na criação do usuário'
+
+  authenticationDashboard:
+    type: object
+    required:
+      - totalUsersAuthentication
+      - authType
+      - criticality
+    properties:
+        totalUsersAuthentication:
+          type: integer
+          description: 'Quantidade total de usuários da base com o tipo de autenticação'
+        authType:
+          $ref: '#/definitions/authType'
+        criticality:
+          $ref: '#/definitions/criticality'
+
+  genericError:
+    properties:
+      message:
+        type: string
+        description: Messaging describing the error.
+      reason:
+        type: string
+        description: A symbolic code identifying the category of the reason of the error.
+        enum:
+          - BAD_REQUEST
+          - UNAUTHORIZED
+          - PAYMENT_REQUIRED
+          - FORBIDDEN
+          - OBJECT_NOT_FOUND
+          - REQUEST_TIMEOUT
+          - GONE
+          - UNPROCESSABLE
+          - INTERNAL_ERROR
+          - NOT_IMPLEMENTED
+          - SERVICE_UNAVAILABLE
+          - INSUFFICIENT_STORAGE

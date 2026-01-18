@@ -1,0 +1,1525 @@
+swagger: '2.0'
+
+info:
+  version: 11.11.0
+  title: Autorização
+  description: 'Responsável pela autorização na plataforma G7.'
+  x-senior-domain: Plataforma
+  x-senior-domain-path: platform
+  x-senior-service-path: authorization
+  contact:
+    name: Senior X Platform
+    url: https://dev.senior.com.br
+    email: seniorx-dev@senior.com.br
+
+host: api.senior.com.br
+
+basePath: /platform/authorization
+
+securityDefinitions:
+  bearerAuth:
+    type: apiKey
+    in: header
+    name: Authorization
+
+produces:
+  - application/json
+consumes:
+  - application/json
+parameters:
+  clientId:
+    name: client_id
+    type: string
+    in: header
+    required: true
+    description: 'Identificação da aplicação cadastrada no portal do desenvolvedor (api.xplatform.com.br)'
+
+paths:
+  /getResource:
+    post:
+      description: 'Retorna os dados de um recurso'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - uri
+            properties:
+              uri:
+                type: string
+                description: 'O identificador único do recurso'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - resource
+            properties:
+              resource:
+                $ref: '#/definitions/resource'
+        404:
+          description: 'Recurso não encontrado'
+        403:
+          description: 'Permissão negada'
+        400:
+          description: 'Requisição inválida, parâmetros obrigatórios não informados ou campo informado incorretamente'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: 'Retorna os dados de um recurso'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - uri
+            properties:
+              uri:
+                type: string
+                description: 'O identificador único do recurso'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - resource
+            properties:
+              resource:
+                $ref: '#/definitions/resource'
+        404:
+          description: 'Recurso não encontrado'
+        403:
+          description: 'Permissão negada'
+        400:
+          description: 'Requisição inválida, parâmetros obrigatórios não informados ou campo informado incorretamente'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /createRole:
+    post:
+      description: 'Cria um novo papel'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - name
+            properties:
+              name:
+                type: string
+                description: 'O nome do papel'
+              description:
+                type: string
+                description: 'A descrição do papel'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - name
+            properties:
+              name:
+                type: string
+                description: 'Retorna o nome do papel criado, quem estiver adicionando o papel,&#10;pode obter todos os dados pelo name'
+        403:
+          description: 'Permissão negada'
+        400:
+          description: 'Requisição inválida, parâmetros obrigatórios não informados ou campo informado incorretamente'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /getFilterKeyRolesNamesByRoleServiceFilterValue:
+    post:
+      description: 'Obtém os papéis vinculados à abrangência de filtro informado.'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - value
+              - domainName
+              - serviceName
+            properties:
+              value:
+                type: string
+                description: 'Abrangência.'
+              domainName:
+                type: string
+                description: 'Nome do domínio onde a abrangência do filtro está vinculado.'
+              serviceName:
+                type: string
+                description: 'Nome do serviço onde a abrangência do filtro está vinculado.'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - filterKeysRolesNames
+            properties:
+              filterKeysRolesNames:
+                $ref: '#/definitions/filterKeyRolesNamesMapping'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: 'Obtém os papéis vinculados à abrangência de filtro informado.'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - value
+              - domainName
+              - serviceName
+            properties:
+              value:
+                type: string
+                description: 'Abrangência.'
+              domainName:
+                type: string
+                description: 'Nome do domínio onde a abrangência do filtro está vinculado.'
+              serviceName:
+                type: string
+                description: 'Nome do serviço onde a abrangência do filtro está vinculado.'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - filterKeysRolesNames
+            properties:
+              filterKeysRolesNames:
+                $ref: '#/definitions/filterKeyRolesNamesMapping'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /unassignUsers:
+    post:
+      description: 'API DEPRECIADA: Use platform/authorization/unassignUsers__11 instead | DATA: 2024-09-09 | Remove um ou mais usuários de um ou mais papéis, lançando o evento rolePermissionsChanged com os usuários removidos'
+      x-senior-event: false
+      deprecated: true
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - roles
+              - users
+            properties:
+              roles:
+                type: array
+                items:
+                  type: string
+                description: 'Nomes dos papéis onde os usuários serão removidos'
+              users:
+                type: array
+                items:
+                  type: string
+                description: 'Os usuário à serem removidos dos papéis'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - changedAssignments
+            properties:
+              changedAssignments:
+                type: boolean
+                description: 'Indica se houve alguma alteração feita.&#10;&#9;&#9;&#9;&#9; Se algum dos usuários foi desassiciado de algum dos papéis, retorna true.&#10;Se todos os usuários já estavam desassociados de todos os papéis, retorna false.'
+        403:
+          description: 'Permissão negada'
+        404:
+          description: 'papel(s) não encontrados'
+        400:
+          description: 'Requisição inválida, parâmetros obrigatórios não informados ou campo informado incorretamente'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /unassignUsers (v11):
+    post:
+      description: 'Remove um ou mais usuários de um ou mais papéis, lançando o evento rolePermissionsChanged com os usuários removidos'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - in: header
+          name: accept
+          description: '_MIME type_ e versão do endpoint utilizado na requisição. [SAIBA MAIS](https://dev.senior.com.br/documentacao/guia-de-api/versionamento/).'
+          type: string
+          default: 'application/json;seniorx.version=11'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - roles
+              - users
+            properties:
+              roles:
+                type: array
+                items:
+                  type: string
+                description: 'Nomes dos papéis onde os usuários serão removidos'
+              users:
+                type: array
+                items:
+                  type: string
+                description: 'Os usuário à serem removidos dos papéis'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - changedAssignments
+            properties:
+              changedAssignments:
+                type: boolean
+                description: 'Indica se houve alguma alteração feita.&#10;&#9;&#9;&#9;&#9; Se algum dos usuários foi desassiciado de algum dos papéis, retorna true.&#10;Se todos os usuários já estavam desassociados de todos os papéis, retorna false.&#10;Se algum usuário não existe retorna a lista de usuários que não foram encontrados.'
+              usersNotFound:
+                type: string
+                description: ''
+        404:
+          description: 'Usuário(s) ou papel(s) não encontrados'
+        403:
+          description: 'Permissão negada'
+        400:
+          description: 'Requisição inválida, parâmetros obrigatórios não informados ou campo informado incorretamente'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /assignUsers:
+    post:
+      description: 'API DEPRECIADA: Use platform/authorization/assignUsers__11 instead | DATA: 2024-09-09 | Vincula um ou mais usuários à um ou mais papéis, lançando o evento rolePermissionsChanged com os usuários incluídos'
+      x-senior-event: false
+      deprecated: true
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - roles
+              - users
+            properties:
+              roles:
+                type: array
+                items:
+                  type: string
+                description: 'Nomes dos papéis onde os usuários serão atribuídos'
+              users:
+                type: array
+                items:
+                  type: string
+                description: 'Os usuário à serem incluídos nos papéis'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - changedAssignments
+            properties:
+              changedAssignments:
+                type: boolean
+                description: 'Indica se houve alguma alteração feita.&#10;&#9;&#9;&#9;&#9; Se algum dos usuários foi associado a algum dos papéis, retorna true.&#10;Se todos os usuários já estavam associados a todos os papéis, retorna false.'
+        403:
+          description: 'Permissão negada'
+        404:
+          description: 'papel(s) não encontrados'
+        400:
+          description: 'Requisição inválida, parâmetros obrigatórios não informados ou campo informado incorretamente'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /assignUsers (v11):
+    post:
+      description: ''
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - in: header
+          name: accept
+          description: '_MIME type_ e versão do endpoint utilizado na requisição. [SAIBA MAIS](https://dev.senior.com.br/documentacao/guia-de-api/versionamento/).'
+          type: string
+          default: 'application/json;seniorx.version=11'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - roles
+              - users
+            properties:
+              roles:
+                type: array
+                items:
+                  type: string
+                description: 'Nomes dos papéis onde os usuários serão atribuídos'
+              users:
+                type: array
+                items:
+                  type: string
+                description: 'Os usuário à serem incluídos nos papéis'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - changedAssignments
+            properties:
+              changedAssignments:
+                type: boolean
+                description: 'Indica se houve alguma alteração feita.&#10;&#9;&#9;&#9;&#9; Se algum dos usuários foi associado a algum dos papéis, retorna true.&#10;Se todos os usuários já estavam associados a todos os papéis, retorna false.&#10;Se algum usuário não existe retorna a lista de usuários que não foram encontrados.'
+              usersNotFound:
+                type: string
+                description: ''
+        404:
+          description: 'Usuário(s) ou papel(s) não encontrados'
+        403:
+          description: 'Permissão negada'
+        400:
+          description: 'Requisição inválida, parâmetros obrigatórios não informados ou campo informado incorretamente'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /checkAccess:
+    post:
+      description: 'Para cada recurso informado, retorna se o usuário corrente possui permissão.&#10;Se o usuário possuir permissão e marcar para incluir os filtros, irá retornar os filtros de serviço e recurso associados.'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - permissions
+            properties:
+              permissions:
+                type: array
+                items:
+                  $ref: '#/definitions/permissionToCheck'
+                description: 'As permissões à serem verificadas'
+              includeFilters:
+                type: boolean
+                description: 'Retornar os filtros de serviço e recurso associados se possuir permissão no recurso'
+              includeDelegations:
+                type: boolean
+                description: 'Retornar as delegações associadas se possuir permissão no recurso'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - permissions
+              - authorized
+            properties:
+              permissions:
+                $ref: '#/definitions/checkedPermission'
+              authorized:
+                type: boolean
+                description: 'Verdadeiro se o usuário possuir permissão em todos os recursos informados'
+        400:
+          description: 'Requisição inválida, parâmetros obrigatórios não informados ou campo informado incorretamente'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: 'Para cada recurso informado, retorna se o usuário corrente possui permissão.&#10;Se o usuário possuir permissão e marcar para incluir os filtros, irá retornar os filtros de serviço e recurso associados.'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - permissions
+            properties:
+              permissions:
+                type: array
+                items:
+                  $ref: '#/definitions/permissionToCheck'
+                description: 'As permissões à serem verificadas'
+              includeFilters:
+                type: boolean
+                description: 'Retornar os filtros de serviço e recurso associados se possuir permissão no recurso'
+              includeDelegations:
+                type: boolean
+                description: 'Retornar as delegações associadas se possuir permissão no recurso'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - permissions
+              - authorized
+            properties:
+              permissions:
+                $ref: '#/definitions/checkedPermission'
+              authorized:
+                type: boolean
+                description: 'Verdadeiro se o usuário possuir permissão em todos os recursos informados'
+        400:
+          description: 'Requisição inválida, parâmetros obrigatórios não informados ou campo informado incorretamente'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /saveSharedResources:
+    post:
+      description: 'Cria ou atualiza recursos juntamente com suas ações no schema shared.&#10;Recursos e ações que já existirem são atualizados, ações que já existirem no recurso são mantidas.&#10;Campos omitidos ou vazios serão ignorados.&#10;O campo nome do recurso é obrigatório na criação de um novo recurso.'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - resources
+            properties:
+              resources:
+                type: array
+                items:
+                  $ref: '#/definitions/resource'
+                description: 'Recursos que devem ser criados.'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - resources
+            properties:
+              resources:
+                $ref: '#/definitions/resource'
+        403:
+          description: 'Permissão negada'
+        400:
+          description: 'Requisição inválida, parâmetros obrigatórios não informados, campo informado incorretamente, não pode remover recurso ou recurso não tem qualquer ação'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /deleteResources:
+    post:
+      description: 'Deleta recursos juntamente com suas ações.&#10;Somente é possível remover recursos customizados'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - resources
+            properties:
+              resources:
+                type: array
+                items:
+                  type: string
+                description: 'Identificadores dos recursos'
+      responses:
+        200:
+          description: 'Ok'
+        400:
+          description: 'Requisição inválida, parâmetros obrigatórios não informados ou somente recursos customizados podem ser excluídos'
+        403:
+          description: 'Permissão negada'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /saveResources:
+    post:
+      description: 'Cria ou atualiza recursos juntamente com suas ações.&#10;Recursos e ações que já existirem são atualizados, ações que já existirem no recurso são mantidas.&#10;Campos omitidos ou vazios serão ignorados.&#10;O campo nome do recurso é obrigatório na criação de um novo recurso.&#10;Só serão permitidas alterações em recursos customizados.'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - resources
+            properties:
+              resources:
+                type: array
+                items:
+                  $ref: '#/definitions/resource'
+                description: 'Recursos que devem ser criados.&#10;É possível utilizar o registro ownerResource para criar um recurso com um usuário como proprietário, informando o nome do usuário.'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - resources
+            properties:
+              resources:
+                $ref: '#/definitions/resource'
+        400:
+          description: 'Requisição inválida, parâmetros obrigatórios não informados, campo informado incorretamente, não pode remover recurso ou recurso não tem qualque ação'
+        403:
+          description: 'Permissão negada'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /getRole:
+    post:
+      description: 'Retorna os dados de um papel'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - name
+            properties:
+              name:
+                type: string
+                description: 'O nome do papel'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - role
+            properties:
+              role:
+                $ref: '#/definitions/role'
+        404:
+          description: 'Usuário(s) ou papel(s) não encontrados'
+        403:
+          description: 'Permissão negada'
+        400:
+          description: 'Requisição inválida, parâmetros obrigatórios não informados ou campo informado incorretamente'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: 'Retorna os dados de um papel'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - name
+            properties:
+              name:
+                type: string
+                description: 'O nome do papel'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - role
+            properties:
+              role:
+                $ref: '#/definitions/role'
+        404:
+          description: 'Usuário(s) ou papel(s) não encontrados'
+        403:
+          description: 'Permissão negada'
+        400:
+          description: 'Requisição inválida, parâmetros obrigatórios não informados ou campo informado incorretamente'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /getRoleFilters:
+    post:
+      description: 'Obtém a união dos filtros vinculados aos papéis informados'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - roles
+              - domainName
+              - serviceName
+            properties:
+              roles:
+                type: array
+                items:
+                  type: string
+                description: 'Lista com o nome dos papéis'
+              domainName:
+                type: string
+                description: 'Nome do domínio onde os filtros estão vinculados'
+              serviceName:
+                type: string
+                description: 'Nome do serviço onde os filtros estão vinculados'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            properties:
+              filters:
+                $ref: '#/definitions/roleServiceFilterSet'
+        403:
+          description: 'Permissão negada'
+        400:
+          description: 'Requisição inválida, parâmetros obrigatórios não informados ou campo informado incorretamente'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: 'Obtém a união dos filtros vinculados aos papéis informados'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - roles
+              - domainName
+              - serviceName
+            properties:
+              roles:
+                type: array
+                items:
+                  type: string
+                description: 'Lista com o nome dos papéis'
+              domainName:
+                type: string
+                description: 'Nome do domínio onde os filtros estão vinculados'
+              serviceName:
+                type: string
+                description: 'Nome do serviço onde os filtros estão vinculados'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            properties:
+              filters:
+                $ref: '#/definitions/roleServiceFilterSet'
+        403:
+          description: 'Permissão negada'
+        400:
+          description: 'Requisição inválida, parâmetros obrigatórios não informados ou campo informado incorretamente'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /deleteRole:
+    post:
+      description: 'Deleta um papel'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - name
+            properties:
+              name:
+                type: string
+                description: 'Nome do papel a ser deletado'
+      responses:
+        200:
+          description: 'Ok'
+        404:
+          description: 'Papel não encontrado'
+        403:
+          description: 'Permissão negada'
+        400:
+          description: 'Requisição inválida, parâmetros obrigatórios não informados ou campo informado incorretamente'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /listRoles:
+    post:
+      description: 'Obtém a lista de todos os papéis cujo nome contenha o valor pesquisado'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              searchValue:
+                type: string
+                description: 'O valor a ser pesquisado no nome dos papéis'
+              pagination:
+                $ref: '#/definitions/pagination'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - roles
+              - listInformation
+            properties:
+              roles:
+                $ref: '#/definitions/role'
+              listInformation:
+                $ref: '#/definitions/listInformation'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: 'Obtém a lista de todos os papéis cujo nome contenha o valor pesquisado'
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              searchValue:
+                type: string
+                description: 'O valor a ser pesquisado no nome dos papéis'
+              pagination:
+                $ref: '#/definitions/pagination'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - roles
+              - listInformation
+            properties:
+              roles:
+                $ref: '#/definitions/role'
+              listInformation:
+                $ref: '#/definitions/listInformation'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /getAssignedUsers:
+    post:
+      description: 'API DEPRECIADA: Use platform/authorization/listRoleAssignedUsers instead | DATA: 2021-10-06 | Retorna uma lista de usuários que estão vinculados em ao menos um dos papéis informados'
+      x-senior-event: false
+      deprecated: true
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - roles
+            properties:
+              roles:
+                type: array
+                items:
+                  type: string
+                description: 'Nomes dos papéis onde os usuários estão atribuídos'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - users
+            properties:
+              users:
+                type: string
+                description: 'Usuários vinculados'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: 'API DEPRECIADA: Use platform/authorization/listRoleAssignedUsers instead | DATA: 2021-10-06 | Retorna uma lista de usuários que estão vinculados em ao menos um dos papéis informados'
+      x-senior-event: false
+      deprecated: true
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - roles
+            properties:
+              roles:
+                type: array
+                items:
+                  type: string
+                description: 'Nomes dos papéis onde os usuários estão atribuídos'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - users
+            properties:
+              users:
+                type: string
+                description: 'Usuários vinculados'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /rolePermissionsChanged:
+    post:
+      description: 'Notifica quando um papel teve suas informações de permissão e/ou filtros alteradas'
+      x-senior-event: true
+      deprecated: false
+      tags:
+        - Events
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - role
+            properties:
+              role:
+                type: string
+                description: 'O nome do papel que teve as permissões alteradas'
+              permissionsIncluded:
+                type: array
+                items:
+                  $ref: '#/definitions/permission'
+                description: 'As permissões incluídas no papel'
+              permissionsExcluded:
+                type: array
+                items:
+                  $ref: '#/definitions/permission'
+                description: 'As permissões excluídas do papel'
+              filtersIncluded:
+                type: array
+                items:
+                  $ref: '#/definitions/roleServiceFilterKey'
+                description: 'Os conjuntos de filtros que foram incluídos'
+              filtersExcluded:
+                type: array
+                items:
+                  $ref: '#/definitions/roleServiceFilterKey'
+                description: 'Os conjuntos de filtros que foram excluídos'
+              usersIncluded:
+                type: array
+                items:
+                  type: string
+                description: 'Usuários incluídos'
+              usersExcluded:
+                type: array
+                items:
+                  type: string
+                description: 'Usuários excluídos'
+      responses:
+        200:
+          description: 'Ok'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /roleServiceFilterDeleted:
+    post:
+      description: 'Sinal para publicação de evento de deleção de filtros de papéis de um serviço.'
+      x-senior-event: true
+      deprecated: false
+      tags:
+        - Events
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - filterKeyRolesNames
+            properties:
+              filterKeyRolesNames:
+                $ref: '#/definitions/filterKeyRolesNamesMapping'
+      responses:
+        200:
+          description: 'Ok'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /usersReady:
+    post:
+      description: 'Notifica quando um ou mais usuários foram inseridos e estão prontos para serem vinculados em papéis'
+      x-senior-event: true
+      deprecated: false
+      tags:
+        - Events
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - usernames
+            properties:
+              usernames:
+                type: array
+                items:
+                  type: string
+                description: 'Usernames dos usuários sem o @domain'
+      responses:
+        200:
+          description: 'Ok'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+
+
+
+definitions:
+
+  delegationStatus:
+    type: string
+    enum:
+      - "ACTIVE"
+      - "PENDING"
+      - "DELETED"
+      - "COMPLETED"
+
+  permissionToCheck:
+    type: object
+    required:
+      - resource
+      - action
+    properties:
+        resource:
+          type: string
+          description: 'URI do recurso'
+        action:
+          type: string
+          description: 'Ação do recurso'
+        attributes:
+          type: array
+          items:
+            $ref: '#/definitions/attributeValue'
+          description: 'Atributos ABAC à serem utilizados no script (se houver)'
+
+  attributeValue:
+    type: object
+    required:
+      - attribute
+      - value
+    properties:
+        attribute:
+          type: string
+          description: 'Nome do atributo'
+        value:
+          type: string
+          description: 'Valor do atributo'
+
+  checkedPermission:
+    type: object
+    required:
+      - resource
+      - action
+      - authorized
+      - serviceFilters
+      - resourceFilters
+      - delegations
+    properties:
+        resource:
+          type: string
+          description: 'URI do recurso'
+        action:
+          type: string
+          description: 'Ação do recurso'
+        authorized:
+          type: boolean
+          description: 'Se o usuário possui permissão'
+        owner:
+          type: boolean
+          description: 'Identifica se a permissão foi dada por ser proprietário'
+        serviceFilters:
+          type: array
+          items:
+            $ref: '#/definitions/roleServiceFilterSet'
+          description: 'Os filtros de serviço existentes para o domínio e serviço do recurso (somente se houver permissão)'
+        resourceFilters:
+          type: array
+          items:
+            type: string
+          description: 'Os filtros existentes do recurso (somente se houver permissão)'
+        delegations:
+          type: array
+          items:
+            $ref: '#/definitions/delegation'
+          description: 'As delegações que referenciam esse recurso (somente se houver permissão)'
+
+  roleServiceFilterSet:
+    type: object
+    required:
+      - key
+      - filters
+    properties:
+        key:
+          $ref: '#/definitions/roleServiceFilterKey'
+        filters:
+          type: array
+          items:
+            $ref: '#/definitions/roleServiceFilter'
+          description: 'Campo obrigatório se for uma inclusão'
+
+  roleServiceFilterKey:
+    type: object
+    required:
+      - domainName
+      - serviceName
+      - sequence
+    properties:
+        domainName:
+          type: string
+          description: 'Domínio do filtro'
+        serviceName:
+          type: string
+          description: 'Serviço do filtro'
+        sequence:
+          type: integer
+          description: 'Sequência para agrupamento do conjunto de filtros'
+
+  roleServiceFilter:
+    type: object
+    required:
+      - name
+      - value
+    properties:
+        name:
+          type: string
+          description: 'Identificador único do filtro dentro do domínio/serviço'
+        value:
+          type: string
+          description: 'Valor do filtro'
+
+  delegation:
+    type: object
+    required:
+      - delegationId
+      - task
+      - originUser
+      - targetUser
+      - from
+      - to
+      - includeFilters
+      - createdDate
+      - deletedDate
+      - permissions
+      - status
+    properties:
+        delegationId:
+          type: string
+          description: 'O identificador da delegação criada'
+        reason:
+          type: string
+          description: 'Descrição do motivo da delegação'
+        task:
+          $ref: '#/definitions/basicTask'
+        originUser:
+          type: string
+          description: 'Usuário que realizou a delegação'
+        targetUser:
+          type: string
+          description: 'Usuário que receberá a delegação'
+        from:
+          type: string
+          description: 'Data de início da delegação. Ela deve ser anterior ou igual a data de término e deve ser igual ou maior que a data atual.'
+          format: "date"
+        to:
+          type: string
+          description: 'Data de término da delegação. Ela deve ser igual ou posterior a data de início.'
+          format: "date"
+        includeFilters:
+          type: boolean
+          description: 'Se a delegeção também inclui os filtros de serviço e recurso associados ao usuário de origem'
+        createdDate:
+          type: string
+          description: 'Data de criação'
+          format: "date-time"
+        deletedDate:
+          type: string
+          description: 'Data de exclusão'
+          format: "date-time"
+        permissions:
+          type: array
+          items:
+            $ref: '#/definitions/permission'
+          description: 'As permissões da atividade que serão delegadas'
+        status:
+          $ref: '#/definitions/delegationStatus'
+
+  basicTask:
+    type: object
+    required:
+      - uri
+      - domain
+      - service
+      - name
+      - master
+    properties:
+        uri:
+          type: string
+          description: 'O identificador único da atividade, seguindo o padrão: task://tenantDomain/domainName/serviceName/taskName'
+        domain:
+          type: string
+          description: 'Dominio associada a atividade'
+        service:
+          type: string
+          description: 'Serviço associado a atividade'
+        name:
+          type: string
+          description: 'Nome da atividade'
+        label:
+          type: string
+          description: 'Chave de internacionalização para o nome da atividade'
+        description:
+          type: string
+          description: 'Chave de internacionalização para a descrição da atividade'
+        master:
+          type: boolean
+          description: 'Informa se a task é master'
+
+  permission:
+    type: object
+    required:
+      - resource
+      - action
+    properties:
+        resource:
+          type: string
+          description: 'O uri do resource'
+        action:
+          type: string
+          description: 'O nome da ação'
+
+  resource:
+    type: object
+    required:
+      - uri
+      - actions
+    properties:
+        uri:
+          type: string
+          description: 'O identificador único do recurso, seguindo o padrão para novos recursos: res://dominio_tenant/custom/nome_servico/nome_recurso'
+        name:
+          type: string
+          description: 'Nome do recurso'
+        label:
+          type: string
+          description: 'Chave de tradução para o nome do recurso'
+        description:
+          type: string
+          description: 'Chave de tradução para a descrição do recurso'
+        actions:
+          type: array
+          items:
+            $ref: '#/definitions/action'
+          description: 'As ações associadas ao recurso'
+        domainName:
+          type: string
+          description: 'Domínio pertencente do recurso'
+        serviceName:
+          type: string
+          description: 'Serviço pertencente do recurso'
+
+  action:
+    type: object
+    required:
+      - name
+    properties:
+        name:
+          type: string
+          description: 'Nome da ação'
+        label:
+          type: string
+          description: 'Chave de tradução para o nome da ação'
+        master:
+          type: boolean
+          description: 'Indica se a ação pode ser somente utilizada por tenants master'
+        hasAttributes:
+          type: boolean
+          description: 'Informação se a ação possui atributos, somente consulta'
+        locked:
+          type: boolean
+          description: 'Informa se a ação está bloqueada'
+
+  role:
+    type: object
+    required:
+      - name
+      - description
+    properties:
+        name:
+          type: string
+          description: 'Nome único do papel'
+        description:
+          type: string
+          description: 'Descrição do papel'
+
+  filterKeyRolesNamesMapping:
+    type: object
+    required:
+      - key
+      - rolesNames
+    properties:
+        key:
+          type: array
+          items:
+            $ref: '#/definitions/roleServiceFilterKey'
+          description: 'Chave de domínio, serviço e sequência.'
+        rolesNames:
+          type: array
+          items:
+            type: string
+          description: 'Papéis vinculados à abrangência de filtro.'
+
+  pagination:
+    type: object
+    properties:
+        pageNumber:
+          type: integer
+          description: 'O número da página retornado. A primeira página corresponde ao índice 0'
+        pageSize:
+          type: integer
+          description: 'Quantidade de registros por página'
+
+  listInformation:
+    type: object
+    required:
+      - totalElements
+      - totalPages
+    properties:
+        totalElements:
+          type: integer
+          description: 'Quantidade total de resultados encontrados'
+        totalPages:
+          type: integer
+          description: 'Quantidade total de páginas encontradas'
+
+  genericError:
+    properties:
+      message:
+        type: string
+        description: Messaging describing the error.
+      reason:
+        type: string
+        description: A symbolic code identifying the category of the reason of the error.
+        enum:
+          - BAD_REQUEST
+          - UNAUTHORIZED
+          - PAYMENT_REQUIRED
+          - FORBIDDEN
+          - OBJECT_NOT_FOUND
+          - REQUEST_TIMEOUT
+          - GONE
+          - UNPROCESSABLE
+          - INTERNAL_ERROR
+          - NOT_IMPLEMENTED
+          - SERVICE_UNAVAILABLE
+          - INSUFFICIENT_STORAGE

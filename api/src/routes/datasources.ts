@@ -6,10 +6,26 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../index.js';
 import { success, send404, apiError, ErrorCodes } from '../lib/response.js';
+import { modulePresets } from '../modules/data-sources/modulePresets.js';
+import { collectPaths, resolvePath } from '../utils/dataPaths.js';
+
+const defaultRecipientsSchema = z.object({
+  phonePath: z.string().min(1, 'Campo de telefone obrigatorio'),
+  namePath: z.string().optional().nullable(),
+  iterateOverPath: z.string().optional().nullable(),
+  filterExpression: z.string().optional().nullable(),
+});
+
+const defaultMappingsSchema = z.object({
+  employeeNamePath: z.string().optional().nullable(),
+  companyNamePath: z.string().optional().nullable(),
+  defaultRecipients: defaultRecipientsSchema,
+});
 
 const dataSourceSchema = z.object({
   name: z.string().min(1, 'Nome obrigatório'),
   description: z.string().optional(),
+  module: z.enum(['HCM_GED', 'HCM_EMPLOYEEJOURNEY', 'PLATFORM_SIGN', 'PLATFORM_USER', 'PLATFORM_AUTHORIZATION']),
   apiModule: z.string().min(1, 'Módulo da API obrigatório'), // sign, ecm_ged, hcm
   apiMethod: z.enum(['GET', 'POST']).default('POST'),
   apiEndpoint: z.string().min(1, 'Endpoint obrigatório'),
@@ -17,11 +33,21 @@ const dataSourceSchema = z.object({
   apiHeaders: z.record(z.string()).optional(),
   responseDataPath: z.string().optional(),
   responseMapping: z.record(z.any()).optional(),
+  defaultMappings: defaultMappingsSchema.optional(),
   isActive: z.boolean().optional().default(true),
 });
 
 const testQuerySchema = z.object({
   tenantId: z.string().uuid('ID do tenant inválido'),
+  dataSourceId: z.string().uuid().optional(),
+  dataSource: z.object({
+    apiModule: z.string().min(1),
+    apiMethod: z.enum(['GET', 'POST']).default('POST'),
+    apiEndpoint: z.string().min(1),
+    apiParams: z.record(z.any()).optional(),
+    apiHeaders: z.record(z.string()).optional(),
+    responseDataPath: z.string().optional(),
+  }).optional(),
 });
 
 // Constrói a URL completa da API Senior
@@ -35,6 +61,122 @@ function buildSeniorUrl(apiModule: string, apiEndpoint: string): string {
     return `${baseUrl}/${endpoint}`;
   }
   return `${baseUrl}/${apiModule}/${endpoint}`;
+}
+
+type DataSourceTestConfig = {
+  apiModule: string;
+  apiMethod: 'GET' | 'POST';
+  apiEndpoint: string;
+  apiParams?: Record<string, unknown> | null;
+  apiHeaders?: Record<string, string> | null;
+  responseDataPath?: string | null;
+};
+
+async function executeDataSourceTest({
+  dataSource,
+  tenantId,
+  dataSourceId,
+}: {
+  dataSource: DataSourceTestConfig;
+  tenantId: string;
+  dataSourceId?: string;
+}) {
+  const credentials = await prisma.seniorCredentials.findUnique({
+    where: { tenantId },
+  });
+
+  if (!credentials) {
+    throw { statusCode: 400, payload: apiError(ErrorCodes.CREDENTIALS_NOT_CONFIGURED, 'Credenciais Senior não configuradas para este tenant') };
+  }
+
+  if (!credentials.authToken || credentials.authToken === 'PENDING_AUTH') {
+    throw { statusCode: 400, payload: apiError(ErrorCodes.INVALID_CREDENTIALS, 'Token não disponível. Execute o teste de login primeiro.') };
+  }
+
+  const url = buildSeniorUrl(dataSource.apiModule, dataSource.apiEndpoint);
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Authorization': credentials.authToken.startsWith('Bearer ')
+      ? credentials.authToken
+      : `Bearer ${credentials.authToken}`,
+    ...(dataSource.apiHeaders || {}),
+  };
+
+  const params = dataSource.apiParams || {};
+  const startTime = Date.now();
+
+  let response: Response;
+  let responseData: any;
+  let httpStatus: number;
+
+  try {
+    if (dataSource.apiMethod === 'GET') {
+      const queryString = new URLSearchParams(params as Record<string, string>).toString();
+      const fullUrl = queryString ? `${url}?${queryString}` : url;
+      response = await fetch(fullUrl, { method: 'GET', headers });
+    } else {
+      response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(params),
+      });
+    }
+
+    httpStatus = response.status;
+    responseData = await response.json().catch(() => null);
+  } catch (error: any) {
+    if (dataSourceId) {
+      await prisma.dataSource.update({
+        where: { id: dataSourceId },
+        data: {
+          lastTestedAt: new Date(),
+          lastTestStatus: 'ERROR',
+        },
+      });
+    }
+    throw {
+      statusCode: 500,
+      payload: {
+        success: false,
+        error: 'REQUEST_FAILED',
+        message: error.message || 'Falha ao executar requisição',
+        duration: Date.now() - startTime,
+      },
+    };
+  }
+
+  const duration = Date.now() - startTime;
+  const isSuccess = httpStatus >= 200 && httpStatus < 300;
+  const extractedData = dataSource.responseDataPath
+    ? resolvePath(responseData, dataSource.responseDataPath)
+    : responseData;
+  const detectedPaths = collectPaths(extractedData ?? responseData);
+
+  if (dataSourceId) {
+    await prisma.dataSource.update({
+      where: { id: dataSourceId },
+      data: {
+        lastTestedAt: new Date(),
+        lastTestStatus: isSuccess ? 'SUCCESS' : 'ERROR',
+        lastTestResponse: responseData || null,
+        lastTestExtractedData: extractedData ?? null,
+        lastTestPaths: detectedPaths,
+      },
+    });
+  }
+
+  return {
+    success: isSuccess,
+    httpStatus,
+    duration,
+    url,
+    method: dataSource.apiMethod,
+    requestBody: params,
+    response: responseData,
+    extractedData,
+    recordCount: Array.isArray(extractedData) ? extractedData.length : null,
+    detectedPaths,
+  };
 }
 
 export async function dataSourcesRoutes(app: FastifyInstance) {
@@ -89,6 +231,7 @@ export async function dataSourcesRoutes(app: FastifyInstance) {
       data: {
         name: body.name,
         description: body.description,
+        module: body.module,
         apiModule: body.apiModule,
         apiMethod: body.apiMethod,
         apiEndpoint: body.apiEndpoint,
@@ -96,6 +239,7 @@ export async function dataSourcesRoutes(app: FastifyInstance) {
         apiHeaders: body.apiHeaders || null,
         responseDataPath: body.responseDataPath,
         responseMapping: body.responseMapping || null,
+        defaultMappings: body.defaultMappings || null,
         isActive: body.isActive ?? true,
       },
     });
@@ -157,251 +301,94 @@ export async function dataSourcesRoutes(app: FastifyInstance) {
       return send404(reply, 'Fonte de Dados');
     }
 
-    // Buscar credenciais do tenant
-    const credentials = await prisma.seniorCredentials.findUnique({
-      where: { tenantId: body.tenantId },
-    });
+    try {
+      const result = await executeDataSourceTest({
+        dataSource: {
+          apiModule: dataSource.apiModule,
+          apiMethod: dataSource.apiMethod,
+          apiEndpoint: dataSource.apiEndpoint,
+          apiParams: (dataSource.apiParams as Record<string, unknown> | null) || null,
+          apiHeaders: (dataSource.apiHeaders as Record<string, string> | null) || null,
+          responseDataPath: dataSource.responseDataPath,
+        },
+        tenantId: body.tenantId,
+        dataSourceId: dataSource.id,
+      });
 
-    if (!credentials) {
-      return reply.status(400).send(
-        apiError(ErrorCodes.CREDENTIALS_NOT_CONFIGURED, 'Credenciais Senior não configuradas para este tenant')
+      return success(result);
+    } catch (error: any) {
+      if (error?.statusCode && error?.payload) {
+        return reply.status(error.statusCode).send(error.payload);
+      }
+      if (error?.errorCode) {
+        return reply.status(400).send(error);
+      }
+      return reply.status(500).send(
+        apiError(ErrorCodes.INTERNAL_ERROR, 'Falha ao testar fonte de dados')
       );
     }
+  });
 
-    if (!credentials.authToken || credentials.authToken === 'PENDING_AUTH') {
-      return reply.status(400).send(
-        apiError(ErrorCodes.INVALID_CREDENTIALS, 'Token não disponível. Execute o teste de login primeiro.')
-      );
+  // ========================================
+  // POST /datasources/test - Testar Query (sem salvar)
+  // ========================================
+  app.post('/test', async (request, reply) => {
+    const body = testQuerySchema.parse(request.body);
+
+    let dataSource = body.dataSource;
+
+    if (!dataSource && body.dataSourceId) {
+      const stored = await prisma.dataSource.findUnique({ where: { id: body.dataSourceId } });
+      if (!stored) {
+        return send404(reply, 'Fonte de Dados');
+      }
+      dataSource = {
+        apiModule: stored.apiModule,
+        apiMethod: stored.apiMethod,
+        apiEndpoint: stored.apiEndpoint,
+        apiParams: (stored.apiParams as Record<string, unknown> | null) || null,
+        apiHeaders: (stored.apiHeaders as Record<string, string> | null) || null,
+        responseDataPath: stored.responseDataPath,
+      };
     }
 
-    // Construir URL
-    const url = buildSeniorUrl(dataSource.apiModule, dataSource.apiEndpoint);
-
-    // Preparar headers
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'Authorization': credentials.authToken.startsWith('Bearer ')
-        ? credentials.authToken
-        : `Bearer ${credentials.authToken}`,
-      ...(dataSource.apiHeaders as Record<string, string> || {}),
-    };
-
-    // Preparar body/params
-    const params = dataSource.apiParams || {};
-
-    const startTime = Date.now();
-    let response: Response;
-    let responseData: any;
-    let httpStatus: number;
+    if (!dataSource) {
+      return reply.status(400).send(
+        apiError(ErrorCodes.INVALID_INPUT, 'Informe dataSourceId ou configuracao da fonte')
+      );
+    }
 
     try {
-      if (dataSource.apiMethod === 'GET') {
-        const queryString = new URLSearchParams(params as Record<string, string>).toString();
-        const fullUrl = queryString ? `${url}?${queryString}` : url;
-        response = await fetch(fullUrl, { method: 'GET', headers });
-      } else {
-        response = await fetch(url, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(params),
-        });
-      }
-
-      httpStatus = response.status;
-      responseData = await response.json().catch(() => null);
+      const result = await executeDataSourceTest({
+        dataSource,
+        tenantId: body.tenantId,
+        dataSourceId: body.dataSourceId,
+      });
+      return success(result);
     } catch (error: any) {
-      // Atualizar status do teste
-      await prisma.dataSource.update({
-        where: { id },
-        data: {
-          lastTestedAt: new Date(),
-          lastTestStatus: 'ERROR',
-        },
-      });
-
-      return reply.status(500).send({
-        success: false,
-        error: 'REQUEST_FAILED',
-        message: error.message || 'Falha ao executar requisição',
-        duration: Date.now() - startTime,
-      });
-    }
-
-    const duration = Date.now() - startTime;
-    const isSuccess = httpStatus >= 200 && httpStatus < 300;
-
-    // Extrair dados usando o path configurado
-    let extractedData = responseData;
-    if (isSuccess && dataSource.responseDataPath && responseData) {
-      const paths = dataSource.responseDataPath.split('.');
-      for (const path of paths) {
-        extractedData = extractedData?.[path];
+      if (error?.statusCode && error?.payload) {
+        return reply.status(error.statusCode).send(error.payload);
       }
+      if (error?.errorCode) {
+        return reply.status(400).send(error);
+      }
+      return reply.status(500).send(
+        apiError(ErrorCodes.INTERNAL_ERROR, 'Falha ao testar fonte de dados')
+      );
     }
-
-    // Atualizar status do teste
-    await prisma.dataSource.update({
-      where: { id },
-      data: {
-        lastTestedAt: new Date(),
-        lastTestStatus: isSuccess ? 'SUCCESS' : 'ERROR',
-      },
-    });
-
-    return success({
-      success: isSuccess,
-      httpStatus,
-      duration,
-      url,
-      method: dataSource.apiMethod,
-      requestBody: params,
-      response: responseData,
-      extractedData,
-      recordCount: Array.isArray(extractedData) ? extractedData.length : null,
-    });
   });
 
   // ========================================
   // GET /datasources/presets/list - Presets baseados nas APIs Senior
   // ========================================
   app.get('/presets/list', async () => {
-    const presets = [
-      // ===== Sign - Assinaturas =====
-      {
-        id: 'sign-list-envelopes-pending',
-        name: 'Envelopes Pendentes de Assinatura',
-        description: 'Lista envelopes aguardando assinatura - ideal para notificações WhatsApp',
-        category: 'sign',
-        apiModule: 'sign',
-        apiMethod: 'POST',
-        apiEndpoint: 'queries/listEnvelopes',
-        apiParams: {
-          status: ['PENDING'],
-          offset: 0,
-          limit: 100,
-        },
-        responseDataPath: 'contents',
-        availableFields: [
-          'id', 'name', 'status', 'createdBy', 'createdDate', 'expirationDate',
-          'signers[].name', 'signers[].email', 'signers[].phoneNumber', 'signers[].status',
-          'documents[].id', 'documents[].originalFilename',
-          'totalSigners', 'totalSignersCompleted'
-        ],
-      },
-      {
-        id: 'sign-list-envelopes-all',
-        name: 'Todos os Envelopes',
-        description: 'Lista todos os envelopes independente do status',
-        category: 'sign',
-        apiModule: 'sign',
-        apiMethod: 'POST',
-        apiEndpoint: 'queries/listEnvelopes',
-        apiParams: {
-          offset: 0,
-          limit: 100,
-        },
-        responseDataPath: 'contents',
-        availableFields: [
-          'id', 'name', 'status', 'createdBy', 'createdDate', 'expirationDate',
-          'signers[].name', 'signers[].email', 'signers[].phoneNumber', 'signers[].status',
-          'documents[].id', 'documents[].originalFilename'
-        ],
-      },
-      {
-        id: 'sign-envelope-info',
-        name: 'Detalhes do Envelope',
-        description: 'Busca informações completas de um envelope específico',
-        category: 'sign',
-        apiModule: 'sign',
-        apiMethod: 'POST',
-        apiEndpoint: 'queries/getEnvelopeInfo',
-        apiParams: {
-          envelopeId: '{{envelopeId}}',
-        },
-        responseDataPath: 'envelope',
-        availableFields: [
-          'id', 'name', 'status', 'createdBy', 'createdDate', 'instructionsToSigner',
-          'signers[].name', 'signers[].email', 'signers[].phoneNumber',
-          'documents[].id', 'documents[].originalFilename'
-        ],
-      },
-      {
-        id: 'sign-envelope-config',
-        name: 'Configuração para Assinatura',
-        description: 'Dados do envelope para um signatário específico',
-        category: 'sign',
-        apiModule: 'sign',
-        apiMethod: 'POST',
-        apiEndpoint: 'queries/getSignatureEnvelopeConfiguration',
-        apiParams: {
-          envelopeId: '{{envelopeId}}',
-          signerEmail: '{{signerEmail}}',
-        },
-        responseDataPath: '',
-        availableFields: [
-          'name', 'status', 'createdBy', 'createdDate', 'expirationDate',
-          'instructionsToSigner', 'documents[].originalFilename'
-        ],
-      },
-      // ===== ECM/GED - Documentos =====
-      {
-        id: 'ged-sign-urls',
-        name: 'URLs de Assinatura',
-        description: 'Retorna URLs base para requisição de token e assinatura',
-        category: 'ecm_ged',
-        apiModule: 'ecm_ged',
-        apiMethod: 'POST',
-        apiEndpoint: 'queries/getSignUrls',
-        apiParams: {},
-        responseDataPath: '',
-        availableFields: ['requestToken', 'sign'],
-      },
-      {
-        id: 'ged-envelope-status',
-        name: 'Status de Assinatura',
-        description: 'Status detalhado dos signatários de um envelope',
-        category: 'ecm_ged',
-        apiModule: 'ecm_ged',
-        apiMethod: 'POST',
-        apiEndpoint: 'queries/getEnvelopeSignStatus',
-        apiParams: {
-          envelopeId: '{{envelopeId}}',
-        },
-        responseDataPath: '',
-        availableFields: [
-          'envelopeId', 'status', 'isFinished',
-          'signers[].email', 'signers[].name', 'signers[].status'
-        ],
-      },
-      {
-        id: 'ged-envelope-history',
-        name: 'Histórico do Envelope',
-        description: 'Timeline de eventos do envelope',
-        category: 'ecm_ged',
-        apiModule: 'ecm_ged',
-        apiMethod: 'POST',
-        apiEndpoint: 'queries/getEnvelopeHistory',
-        apiParams: {
-          envelopeId: '{{envelopeId}}',
-        },
-        responseDataPath: 'envelopeTimeline',
-        availableFields: ['action', 'date', 'userName', 'userEmail'],
-      },
-      {
-        id: 'ged-signed-documents',
-        name: 'Documentos Assinados',
-        description: 'Documentos finalizados de um envelope',
-        category: 'ecm_ged',
-        apiModule: 'ecm_ged',
-        apiMethod: 'POST',
-        apiEndpoint: 'queries/getSignedDocuments',
-        apiParams: {
-          hashEnvelope: '{{hashEnvelope}}',
-        },
-        responseDataPath: 'documents',
-        availableFields: ['title', 'url'],
-      },
-    ];
+    const presets = modulePresets.flatMap((modulePreset) =>
+      modulePreset.dataSourcePresets.map((preset) => ({
+        ...preset,
+        module: modulePreset.id,
+        defaultMappings: preset.defaultMappings || modulePreset.defaultMappings,
+      }))
+    );
 
     return success(presets);
   });
@@ -410,61 +397,20 @@ export async function dataSourcesRoutes(app: FastifyInstance) {
   // GET /datasources/modules - Lista módulos disponíveis com defaults
   // ========================================
   app.get('/modules', async () => {
-    const modules = [
-      {
-        id: 'sign',
-        name: 'Sign (Assinaturas)',
-        description: 'APIs de assinatura eletrônica e digital',
-        defaultEndpoint: 'queries/listEnvelopes',
-        defaultMethod: 'POST',
-        defaultParams: {
-          status: ['PENDING'],
-          offset: 0,
-          limit: 100,
-        },
-        defaultResponsePath: 'contents',
-        endpoints: [
-          { path: 'queries/listEnvelopes', name: 'Listar Envelopes', method: 'POST' },
-          { path: 'queries/getEnvelopeInfo', name: 'Info do Envelope', method: 'POST' },
-          { path: 'queries/getSignatureEnvelopeConfiguration', name: 'Config para Assinatura', method: 'POST' },
-          { path: 'queries/countListEnvelopes', name: 'Contar Envelopes', method: 'POST' },
-          { path: 'actions/resendRequestSign', name: 'Reenviar Solicitação', method: 'POST' },
-        ],
-      },
-      {
-        id: 'ecm_ged',
-        name: 'ECM/GED (Documentos)',
-        description: 'Gestão eletrônica de documentos',
-        defaultEndpoint: 'queries/getSignUrls',
-        defaultMethod: 'POST',
-        defaultParams: {},
-        defaultResponsePath: '',
-        endpoints: [
-          { path: 'queries/getSignUrls', name: 'URLs de Assinatura', method: 'POST' },
-          { path: 'queries/getEnvelopeSignStatus', name: 'Status do Envelope', method: 'POST' },
-          { path: 'queries/getEnvelopeHistory', name: 'Histórico', method: 'POST' },
-          { path: 'queries/getSignedDocuments', name: 'Docs Assinados', method: 'POST' },
-          { path: 'queries/getEnvelopeSignature', name: 'Dados da Assinatura', method: 'POST' },
-        ],
-      },
-      {
-        id: 'hcm',
-        name: 'HCM (Recursos Humanos)',
-        description: 'APIs de gestão de pessoas',
-        defaultEndpoint: 'queries/listEmployees',
-        defaultMethod: 'POST',
-        defaultParams: {
-          offset: 0,
-          limit: 100,
-        },
-        defaultResponsePath: 'contents',
-        endpoints: [
-          { path: 'queries/listEmployees', name: 'Listar Funcionários', method: 'POST' },
-          { path: 'queries/getEmployee', name: 'Dados do Funcionário', method: 'POST' },
-        ],
-      },
-    ];
+    const modules = modulePresets.map((preset) => ({
+      id: preset.id,
+      label: preset.label,
+      description: preset.description,
+      apiModule: preset.apiModule,
+      defaultDataSource: preset.defaultDataSource,
+      defaultMappings: preset.defaultMappings,
+      endpoints: preset.endpoints,
+    }));
 
     return success(modules);
   });
 }
+
+
+
+

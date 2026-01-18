@@ -1,0 +1,4975 @@
+swagger: '2.0'
+
+info:
+  version: 3.3.0
+  title: employeejourney
+  description: 'Serviço da Jornada do Colaborador: provê informações sobre o colaborador'
+  x-senior-domain: hcm
+  x-senior-domain-path: hcm
+  x-senior-service-path: employeejourney
+  contact:
+    name: Senior X Platform
+    url: https://dev.senior.com.br
+    email: seniorx-dev@senior.com.br
+
+host: api.senior.com.br
+
+basePath: /hcm/employeejourney
+
+securityDefinitions:
+  bearerAuth:
+    type: apiKey
+    in: header
+    name: Authorization
+
+produces:
+  - application/json
+consumes:
+  - application/json
+parameters:
+  clientId:
+    name: client_id
+    type: string
+    in: header
+    required: true
+    description: 'Identificação da aplicação cadastrada no portal do desenvolvedor (api.xplatform.com.br)'
+
+paths:
+  /getDepartment:
+    post:
+      description: ''
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              size:
+                type: integer
+                description: ''
+              offset:
+                type: integer
+                description: ''
+              displayFields:
+                type: string
+                description: ''
+              filter:
+                type: string
+                description: ''
+              orderBy:
+                type: string
+                description: ''
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - totalElements
+              - totalPages
+              - contents
+            properties:
+              totalElements:
+                type: integer
+                description: 'Indica quantos registros foram encontrados'
+              totalPages:
+                type: integer
+                description: 'Indica o número de páginas da consulta (incluindo a atual)'
+              contents:
+                $ref: '#/definitions/departmentResponse'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: ''
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              size:
+                type: integer
+                description: ''
+              offset:
+                type: integer
+                description: ''
+              displayFields:
+                type: string
+                description: ''
+              filter:
+                type: string
+                description: ''
+              orderBy:
+                type: string
+                description: ''
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - totalElements
+              - totalPages
+              - contents
+            properties:
+              totalElements:
+                type: integer
+                description: 'Indica quantos registros foram encontrados'
+              totalPages:
+                type: integer
+                description: 'Indica o número de páginas da consulta (incluindo a atual)'
+              contents:
+                $ref: '#/definitions/departmentResponse'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /getCostCenter:
+    post:
+      description: ''
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              size:
+                type: integer
+                description: ''
+              offset:
+                type: integer
+                description: ''
+              displayFields:
+                type: string
+                description: ''
+              filter:
+                type: string
+                description: ''
+              orderBy:
+                type: string
+                description: ''
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - totalElements
+              - totalPages
+              - contents
+            properties:
+              totalElements:
+                type: integer
+                description: 'Indica quantos registros foram encontrados'
+              totalPages:
+                type: integer
+                description: 'Indica o número de páginas da consulta (incluindo a atual)'
+              contents:
+                $ref: '#/definitions/costCenterResponse'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: ''
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              size:
+                type: integer
+                description: ''
+              offset:
+                type: integer
+                description: ''
+              displayFields:
+                type: string
+                description: ''
+              filter:
+                type: string
+                description: ''
+              orderBy:
+                type: string
+                description: ''
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - totalElements
+              - totalPages
+              - contents
+            properties:
+              totalElements:
+                type: integer
+                description: 'Indica quantos registros foram encontrados'
+              totalPages:
+                type: integer
+                description: 'Indica o número de páginas da consulta (incluindo a atual)'
+              contents:
+                $ref: '#/definitions/costCenterResponse'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /getPerson:
+    post:
+      description: ''
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              size:
+                type: integer
+                description: ''
+              offset:
+                type: integer
+                description: ''
+              displayFields:
+                type: string
+                description: ''
+              filter:
+                type: string
+                description: ''
+              orderBy:
+                type: string
+                description: ''
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - totalElements
+              - totalPages
+              - contents
+            properties:
+              totalElements:
+                type: integer
+                description: 'Indica quantos registros foram encontrados'
+              totalPages:
+                type: integer
+                description: 'Indica o número de páginas da consulta (incluindo a atual)'
+              contents:
+                $ref: '#/definitions/personResponse__2'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: ''
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              size:
+                type: integer
+                description: ''
+              offset:
+                type: integer
+                description: ''
+              displayFields:
+                type: string
+                description: ''
+              filter:
+                type: string
+                description: ''
+              orderBy:
+                type: string
+                description: ''
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - totalElements
+              - totalPages
+              - contents
+            properties:
+              totalElements:
+                type: integer
+                description: 'Indica quantos registros foram encontrados'
+              totalPages:
+                type: integer
+                description: 'Indica o número de páginas da consulta (incluindo a atual)'
+              contents:
+                $ref: '#/definitions/personResponse__2'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /getCompany:
+    post:
+      description: ''
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              size:
+                type: integer
+                description: ''
+              offset:
+                type: integer
+                description: ''
+              displayFields:
+                type: string
+                description: ''
+              filter:
+                type: string
+                description: ''
+              orderBy:
+                type: string
+                description: ''
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - totalElements
+              - totalPages
+              - contents
+            properties:
+              totalElements:
+                type: integer
+                description: 'Indica quantos registros foram encontrados'
+              totalPages:
+                type: integer
+                description: 'Indica o número de páginas da consulta (incluindo a atual)'
+              contents:
+                $ref: '#/definitions/companyResponse'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: ''
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              size:
+                type: integer
+                description: ''
+              offset:
+                type: integer
+                description: ''
+              displayFields:
+                type: string
+                description: ''
+              filter:
+                type: string
+                description: ''
+              orderBy:
+                type: string
+                description: ''
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - totalElements
+              - totalPages
+              - contents
+            properties:
+              totalElements:
+                type: integer
+                description: 'Indica quantos registros foram encontrados'
+              totalPages:
+                type: integer
+                description: 'Indica o número de páginas da consulta (incluindo a atual)'
+              contents:
+                $ref: '#/definitions/companyResponse'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /getEmployee:
+    post:
+      description: ''
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              size:
+                type: integer
+                description: ''
+              offset:
+                type: integer
+                description: ''
+              displayFields:
+                type: string
+                description: ''
+              filter:
+                type: string
+                description: ''
+              orderBy:
+                type: string
+                description: ''
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - totalElements
+              - totalPages
+              - contents
+            properties:
+              totalElements:
+                type: integer
+                description: 'Indica quantos registros foram encontrados'
+              totalPages:
+                type: integer
+                description: 'Indica o número de páginas da consulta (incluindo a atual)'
+              contents:
+                $ref: '#/definitions/employeeResponse'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: ''
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              size:
+                type: integer
+                description: ''
+              offset:
+                type: integer
+                description: ''
+              displayFields:
+                type: string
+                description: ''
+              filter:
+                type: string
+                description: ''
+              orderBy:
+                type: string
+                description: ''
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - totalElements
+              - totalPages
+              - contents
+            properties:
+              totalElements:
+                type: integer
+                description: 'Indica quantos registros foram encontrados'
+              totalPages:
+                type: integer
+                description: 'Indica o número de páginas da consulta (incluindo a atual)'
+              contents:
+                $ref: '#/definitions/employeeResponse'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /getAddress:
+    post:
+      description: ''
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              size:
+                type: integer
+                description: ''
+              offset:
+                type: integer
+                description: ''
+              displayFields:
+                type: string
+                description: ''
+              filter:
+                type: string
+                description: ''
+              orderBy:
+                type: string
+                description: ''
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - totalElements
+              - totalPages
+              - contents
+            properties:
+              totalElements:
+                type: integer
+                description: 'Indica quantos registros foram encontrados'
+              totalPages:
+                type: integer
+                description: 'Indica o número de páginas da consulta (incluindo a atual)'
+              contents:
+                $ref: '#/definitions/addressResponse'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: ''
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              size:
+                type: integer
+                description: ''
+              offset:
+                type: integer
+                description: ''
+              displayFields:
+                type: string
+                description: ''
+              filter:
+                type: string
+                description: ''
+              orderBy:
+                type: string
+                description: ''
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - totalElements
+              - totalPages
+              - contents
+            properties:
+              totalElements:
+                type: integer
+                description: 'Indica quantos registros foram encontrados'
+              totalPages:
+                type: integer
+                description: 'Indica o número de páginas da consulta (incluindo a atual)'
+              contents:
+                $ref: '#/definitions/addressResponse'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /getCompanyWithBranches:
+    post:
+      description: ''
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              size:
+                type: integer
+                description: ''
+              offset:
+                type: integer
+                description: ''
+              displayFields:
+                type: string
+                description: ''
+              filter:
+                type: string
+                description: ''
+              orderBy:
+                type: string
+                description: ''
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - totalElements
+              - totalPages
+              - contents
+            properties:
+              totalElements:
+                type: integer
+                description: 'Indica quantos registros foram encontrados'
+              totalPages:
+                type: integer
+                description: 'Indica o número de páginas da consulta (incluindo a atual)'
+              contents:
+                $ref: '#/definitions/companyWithBranchesResponse'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: ''
+      x-senior-event: false
+      deprecated: false
+      tags:
+        - Endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              size:
+                type: integer
+                description: ''
+              offset:
+                type: integer
+                description: ''
+              displayFields:
+                type: string
+                description: ''
+              filter:
+                type: string
+                description: ''
+              orderBy:
+                type: string
+                description: ''
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - totalElements
+              - totalPages
+              - contents
+            properties:
+              totalElements:
+                type: integer
+                description: 'Indica quantos registros foram encontrados'
+              totalPages:
+                type: integer
+                description: 'Indica o número de páginas da consulta (incluindo a atual)'
+              contents:
+                $ref: '#/definitions/companyWithBranchesResponse'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+
+  /entities/companyWithBranches:
+    post:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: entity
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/companyWithBranches'
+      responses:
+        200:
+          description: 'The created resource'
+          schema:
+            $ref: '#/definitions/companyWithBranches'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    patch:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: entity
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/companyWithBranches'
+      responses:
+        200:
+          description: 'The created resource'
+          schema:
+            $ref: '#/definitions/companyWithBranches'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: offset
+          in: query
+          type: number
+        - name: size
+          in: query
+          type: number
+      responses:
+        200:
+          description: 'The created resource'
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/companyWithBranches'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+
+  /entities/companyWithBranches/{id}:
+    put:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: entity
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/companyWithBranches'
+      responses:
+        200:
+          description: Ok
+          schema:
+            $ref: '#/definitions/companyWithBranches'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    patch:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: entity
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/companyWithBranches'
+      responses:
+        200:
+          description: Ok
+          schema:
+            $ref: '#/definitions/companyWithBranches'
+        default:
+            description: Error response
+            schema:
+              $ref: '#/definitions/genericError'
+    get:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Ok
+          schema:
+            $ref: '#/definitions/companyWithBranches'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    delete:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Ok
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /entities/companyWithBranches/bulk:
+    post:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: entities
+          in: body
+          required: true
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/companyWithBranches'
+      responses:
+        200:
+          description: 'The bulk creation has created resources'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /entities/company:
+    post:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: entity
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/company'
+      responses:
+        200:
+          description: 'The created resource'
+          schema:
+            $ref: '#/definitions/company'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    patch:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: entity
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/company'
+      responses:
+        200:
+          description: 'The created resource'
+          schema:
+            $ref: '#/definitions/company'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: offset
+          in: query
+          type: number
+        - name: size
+          in: query
+          type: number
+      responses:
+        200:
+          description: 'The created resource'
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/company'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+
+  /entities/company/{id}:
+    put:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: entity
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/company'
+      responses:
+        200:
+          description: Ok
+          schema:
+            $ref: '#/definitions/company'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    patch:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: entity
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/company'
+      responses:
+        200:
+          description: Ok
+          schema:
+            $ref: '#/definitions/company'
+        default:
+            description: Error response
+            schema:
+              $ref: '#/definitions/genericError'
+    get:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Ok
+          schema:
+            $ref: '#/definitions/company'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    delete:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Ok
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /entities/company/bulk:
+    post:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: entities
+          in: body
+          required: true
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/company'
+      responses:
+        200:
+          description: 'The bulk creation has created resources'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /entities/department:
+    post:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: entity
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/department'
+      responses:
+        200:
+          description: 'The created resource'
+          schema:
+            $ref: '#/definitions/department'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    patch:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: entity
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/department'
+      responses:
+        200:
+          description: 'The created resource'
+          schema:
+            $ref: '#/definitions/department'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: offset
+          in: query
+          type: number
+        - name: size
+          in: query
+          type: number
+      responses:
+        200:
+          description: 'The created resource'
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/department'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+
+  /entities/department/{id}:
+    put:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: entity
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/department'
+      responses:
+        200:
+          description: Ok
+          schema:
+            $ref: '#/definitions/department'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    patch:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: entity
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/department'
+      responses:
+        200:
+          description: Ok
+          schema:
+            $ref: '#/definitions/department'
+        default:
+            description: Error response
+            schema:
+              $ref: '#/definitions/genericError'
+    get:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Ok
+          schema:
+            $ref: '#/definitions/department'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    delete:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Ok
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /entities/department/bulk:
+    post:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: entities
+          in: body
+          required: true
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/department'
+      responses:
+        200:
+          description: 'The bulk creation has created resources'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /entities/employee:
+    post:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: entity
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/employee'
+      responses:
+        200:
+          description: 'The created resource'
+          schema:
+            $ref: '#/definitions/employee'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    patch:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: entity
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/employee'
+      responses:
+        200:
+          description: 'The created resource'
+          schema:
+            $ref: '#/definitions/employee'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: offset
+          in: query
+          type: number
+        - name: size
+          in: query
+          type: number
+      responses:
+        200:
+          description: 'The created resource'
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/employee'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+
+  /entities/employee/{id}:
+    put:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: entity
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/employee'
+      responses:
+        200:
+          description: Ok
+          schema:
+            $ref: '#/definitions/employee'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    patch:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: entity
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/employee'
+      responses:
+        200:
+          description: Ok
+          schema:
+            $ref: '#/definitions/employee'
+        default:
+            description: Error response
+            schema:
+              $ref: '#/definitions/genericError'
+    get:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Ok
+          schema:
+            $ref: '#/definitions/employee'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    delete:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Ok
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /entities/employee/bulk:
+    post:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: entities
+          in: body
+          required: true
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/employee'
+      responses:
+        200:
+          description: 'The bulk creation has created resources'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /entities/costCenter:
+    post:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: entity
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/costCenter'
+      responses:
+        200:
+          description: 'The created resource'
+          schema:
+            $ref: '#/definitions/costCenter'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    patch:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: entity
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/costCenter'
+      responses:
+        200:
+          description: 'The created resource'
+          schema:
+            $ref: '#/definitions/costCenter'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: offset
+          in: query
+          type: number
+        - name: size
+          in: query
+          type: number
+      responses:
+        200:
+          description: 'The created resource'
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/costCenter'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+
+  /entities/costCenter/{id}:
+    put:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: entity
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/costCenter'
+      responses:
+        200:
+          description: Ok
+          schema:
+            $ref: '#/definitions/costCenter'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    patch:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: entity
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/costCenter'
+      responses:
+        200:
+          description: Ok
+          schema:
+            $ref: '#/definitions/costCenter'
+        default:
+            description: Error response
+            schema:
+              $ref: '#/definitions/genericError'
+    get:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Ok
+          schema:
+            $ref: '#/definitions/costCenter'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    delete:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Ok
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /entities/costCenter/bulk:
+    post:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: entities
+          in: body
+          required: true
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/costCenter'
+      responses:
+        200:
+          description: 'The bulk creation has created resources'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /entities/address:
+    post:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: entity
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/address'
+      responses:
+        200:
+          description: 'The created resource'
+          schema:
+            $ref: '#/definitions/address'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    patch:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: entity
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/address'
+      responses:
+        200:
+          description: 'The created resource'
+          schema:
+            $ref: '#/definitions/address'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: offset
+          in: query
+          type: number
+        - name: size
+          in: query
+          type: number
+      responses:
+        200:
+          description: 'The created resource'
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/address'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+
+  /entities/address/{id}:
+    put:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: entity
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/address'
+      responses:
+        200:
+          description: Ok
+          schema:
+            $ref: '#/definitions/address'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    patch:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: entity
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/address'
+      responses:
+        200:
+          description: Ok
+          schema:
+            $ref: '#/definitions/address'
+        default:
+            description: Error response
+            schema:
+              $ref: '#/definitions/genericError'
+    get:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Ok
+          schema:
+            $ref: '#/definitions/address'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    delete:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Ok
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /entities/address/bulk:
+    post:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: entities
+          in: body
+          required: true
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/address'
+      responses:
+        200:
+          description: 'The bulk creation has created resources'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /entities/person:
+    post:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: entity
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/person'
+      responses:
+        200:
+          description: 'The created resource'
+          schema:
+            $ref: '#/definitions/person'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    patch:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: entity
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/person'
+      responses:
+        200:
+          description: 'The created resource'
+          schema:
+            $ref: '#/definitions/person'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: offset
+          in: query
+          type: number
+        - name: size
+          in: query
+          type: number
+      responses:
+        200:
+          description: 'The created resource'
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/person'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+
+  /entities/person/{id}:
+    put:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: entity
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/person'
+      responses:
+        200:
+          description: Ok
+          schema:
+            $ref: '#/definitions/person'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    patch:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: entity
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/person'
+      responses:
+        200:
+          description: Ok
+          schema:
+            $ref: '#/definitions/person'
+        default:
+            description: Error response
+            schema:
+              $ref: '#/definitions/genericError'
+    get:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Ok
+          schema:
+            $ref: '#/definitions/person'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    delete:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Ok
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /entities/person/bulk:
+    post:
+      description: "This entity is customizable."
+      tags:
+        - Entities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: entities
+          in: body
+          required: true
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/person'
+      responses:
+        200:
+          description: 'The bulk creation has created resources'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+
+  /apis/address:
+    post:
+      description: "API DEPRECIADA | The 'create' request primitive for the address facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/addressFacade'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            $ref: '#/definitions/addressFacade'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: "API DEPRECIADA | The 'list' request primitive for the address facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: offset
+          in: query
+          type: number
+        - name: size
+          in: query
+          type: number
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - contents
+            properties:
+              contents:
+                $ref: '#/definitions/addressFacade'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+
+  /apis/address/{id}:
+    put:
+      description: "API DEPRECIADA | The 'update' request primitive for the address facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: input
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/addressFacade'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            $ref: '#/definitions/addressFacade'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: "API DEPRECIADA | The 'retrieve' request primitive for the address facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            $ref: '#/definitions/addressFacade'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    delete:
+      description: "API DEPRECIADA | The 'delete' request primitive for the address facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Ok
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /apis/department:
+    post:
+      description: "API DEPRECIADA | The 'create' request primitive for the department facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/departmentFacade'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            $ref: '#/definitions/departmentFacade'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: "API DEPRECIADA | The 'list' request primitive for the department facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: offset
+          in: query
+          type: number
+        - name: size
+          in: query
+          type: number
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - contents
+            properties:
+              contents:
+                $ref: '#/definitions/departmentFacade'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+
+  /apis/department/{id}:
+    put:
+      description: "API DEPRECIADA | The 'update' request primitive for the department facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: input
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/departmentFacade'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            $ref: '#/definitions/departmentFacade'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: "API DEPRECIADA | The 'retrieve' request primitive for the department facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            $ref: '#/definitions/departmentFacade'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    delete:
+      description: "API DEPRECIADA | The 'delete' request primitive for the department facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Ok
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /apis/person (v2):
+    post:
+      description: "API DEPRECIADA | The 'create' request primitive for the person (v2) facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - in: header
+          name: accept
+          description: '_MIME type_ e versão do endpoint utilizado na requisição. [SAIBA MAIS](https://dev.senior.com.br/documentacao/guia-de-api/versionamento/).'
+          type: string
+          default: 'application/json;seniorx.version=2'
+        - name: input
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/personFacade__2'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            $ref: '#/definitions/personFacade__2'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: "API DEPRECIADA | The 'list' request primitive for the person (v2) facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - in: header
+          name: accept
+          description: '_MIME type_ e versão do endpoint utilizado na requisição. [SAIBA MAIS](https://dev.senior.com.br/documentacao/guia-de-api/versionamento/).'
+          type: string
+          default: 'application/json;seniorx.version=2'
+        - name: offset
+          in: query
+          type: number
+        - name: size
+          in: query
+          type: number
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - contents
+            properties:
+              contents:
+                $ref: '#/definitions/personFacade__2'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+
+  /apis/person (v2)/{id}:
+    put:
+      description: "API DEPRECIADA | The 'update' request primitive for the person (v2) facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - in: header
+          name: accept
+          description: '_MIME type_ e versão do endpoint utilizado na requisição. [SAIBA MAIS](https://dev.senior.com.br/documentacao/guia-de-api/versionamento/).'
+          type: string
+          default: 'application/json;seniorx.version=2'
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: input
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/personFacade__2'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            $ref: '#/definitions/personFacade__2'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: "API DEPRECIADA | The 'retrieve' request primitive for the person (v2) facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - in: header
+          name: accept
+          description: '_MIME type_ e versão do endpoint utilizado na requisição. [SAIBA MAIS](https://dev.senior.com.br/documentacao/guia-de-api/versionamento/).'
+          type: string
+          default: 'application/json;seniorx.version=2'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            $ref: '#/definitions/personFacade__2'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    delete:
+      description: "API DEPRECIADA | The 'delete' request primitive for the person (v2) facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - in: header
+          name: accept
+          description: '_MIME type_ e versão do endpoint utilizado na requisição. [SAIBA MAIS](https://dev.senior.com.br/documentacao/guia-de-api/versionamento/).'
+          type: string
+          default: 'application/json;seniorx.version=2'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Ok
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /apis/company:
+    post:
+      description: "API DEPRECIADA | The 'create' request primitive for the company facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/companyFacade'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            $ref: '#/definitions/companyFacade'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: "API DEPRECIADA | The 'list' request primitive for the company facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: offset
+          in: query
+          type: number
+        - name: size
+          in: query
+          type: number
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - contents
+            properties:
+              contents:
+                $ref: '#/definitions/companyFacade'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+
+  /apis/company/{id}:
+    put:
+      description: "API DEPRECIADA | The 'update' request primitive for the company facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: input
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/companyFacade'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            $ref: '#/definitions/companyFacade'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: "API DEPRECIADA | The 'retrieve' request primitive for the company facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            $ref: '#/definitions/companyFacade'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    delete:
+      description: "API DEPRECIADA | The 'delete' request primitive for the company facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Ok
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /apis/costCenter:
+    post:
+      description: "API DEPRECIADA | The 'create' request primitive for the costCenter facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/costCenterFacade'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            $ref: '#/definitions/costCenterFacade'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: "API DEPRECIADA | The 'list' request primitive for the costCenter facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: offset
+          in: query
+          type: number
+        - name: size
+          in: query
+          type: number
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - contents
+            properties:
+              contents:
+                $ref: '#/definitions/costCenterFacade'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+
+  /apis/costCenter/{id}:
+    put:
+      description: "API DEPRECIADA | The 'update' request primitive for the costCenter facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: input
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/costCenterFacade'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            $ref: '#/definitions/costCenterFacade'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: "API DEPRECIADA | The 'retrieve' request primitive for the costCenter facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            $ref: '#/definitions/costCenterFacade'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    delete:
+      description: "API DEPRECIADA | The 'delete' request primitive for the costCenter facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Ok
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /apis/employee:
+    post:
+      description: "API DEPRECIADA | The 'create' request primitive for the employee facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/employeeFacade'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            $ref: '#/definitions/employeeFacade'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: "API DEPRECIADA | The 'list' request primitive for the employee facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: offset
+          in: query
+          type: number
+        - name: size
+          in: query
+          type: number
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - contents
+            properties:
+              contents:
+                $ref: '#/definitions/employeeFacade'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+
+  /apis/employee/{id}:
+    put:
+      description: "API DEPRECIADA | The 'update' request primitive for the employee facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: input
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/employeeFacade'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            $ref: '#/definitions/employeeFacade'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: "API DEPRECIADA | The 'retrieve' request primitive for the employee facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            $ref: '#/definitions/employeeFacade'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    delete:
+      description: "API DEPRECIADA | The 'delete' request primitive for the employee facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Ok
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /apis/employee (v2):
+    post:
+      description: "API DEPRECIADA | The 'create' request primitive for the employee (v2) facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - in: header
+          name: accept
+          description: '_MIME type_ e versão do endpoint utilizado na requisição. [SAIBA MAIS](https://dev.senior.com.br/documentacao/guia-de-api/versionamento/).'
+          type: string
+          default: 'application/json;seniorx.version=2'
+        - name: input
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/employeeFacade__2'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            $ref: '#/definitions/employeeFacade__2'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: "API DEPRECIADA | The 'list' request primitive for the employee (v2) facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - in: header
+          name: accept
+          description: '_MIME type_ e versão do endpoint utilizado na requisição. [SAIBA MAIS](https://dev.senior.com.br/documentacao/guia-de-api/versionamento/).'
+          type: string
+          default: 'application/json;seniorx.version=2'
+        - name: offset
+          in: query
+          type: number
+        - name: size
+          in: query
+          type: number
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - contents
+            properties:
+              contents:
+                $ref: '#/definitions/employeeFacade__2'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+
+  /apis/employee (v2)/{id}:
+    put:
+      description: "API DEPRECIADA | The 'update' request primitive for the employee (v2) facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - in: header
+          name: accept
+          description: '_MIME type_ e versão do endpoint utilizado na requisição. [SAIBA MAIS](https://dev.senior.com.br/documentacao/guia-de-api/versionamento/).'
+          type: string
+          default: 'application/json;seniorx.version=2'
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: input
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/employeeFacade__2'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            $ref: '#/definitions/employeeFacade__2'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: "API DEPRECIADA | The 'retrieve' request primitive for the employee (v2) facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - in: header
+          name: accept
+          description: '_MIME type_ e versão do endpoint utilizado na requisição. [SAIBA MAIS](https://dev.senior.com.br/documentacao/guia-de-api/versionamento/).'
+          type: string
+          default: 'application/json;seniorx.version=2'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            $ref: '#/definitions/employeeFacade__2'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    delete:
+      description: "API DEPRECIADA | The 'delete' request primitive for the employee (v2) facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - in: header
+          name: accept
+          description: '_MIME type_ e versão do endpoint utilizado na requisição. [SAIBA MAIS](https://dev.senior.com.br/documentacao/guia-de-api/versionamento/).'
+          type: string
+          default: 'application/json;seniorx.version=2'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Ok
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /apis/companyWithBranches:
+    post:
+      description: "API DEPRECIADA | The 'create' request primitive for the companyWithBranches facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/companyWithBranchesFacade'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            $ref: '#/definitions/companyWithBranchesFacade'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: "API DEPRECIADA | The 'list' request primitive for the companyWithBranches facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: offset
+          in: query
+          type: number
+        - name: size
+          in: query
+          type: number
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - contents
+            properties:
+              contents:
+                $ref: '#/definitions/companyWithBranchesFacade'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+
+  /apis/companyWithBranches/{id}:
+    put:
+      description: "API DEPRECIADA | The 'update' request primitive for the companyWithBranches facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: input
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/companyWithBranchesFacade'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            $ref: '#/definitions/companyWithBranchesFacade'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: "API DEPRECIADA | The 'retrieve' request primitive for the companyWithBranches facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            $ref: '#/definitions/companyWithBranchesFacade'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    delete:
+      description: "API DEPRECIADA | The 'delete' request primitive for the companyWithBranches facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Ok
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+  /apis/person:
+    post:
+      description: "API DEPRECIADA | The 'create' request primitive for the person facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: input
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/personFacade'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            $ref: '#/definitions/personFacade'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: "API DEPRECIADA | The 'list' request primitive for the person facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: offset
+          in: query
+          type: number
+        - name: size
+          in: query
+          type: number
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            type: object
+            required:
+              - contents
+            properties:
+              contents:
+                $ref: '#/definitions/personFacade'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+
+  /apis/person/{id}:
+    put:
+      description: "API DEPRECIADA | The 'update' request primitive for the person facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: input
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/personFacade'
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            $ref: '#/definitions/personFacade'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    get:
+      description: "API DEPRECIADA | The 'retrieve' request primitive for the person facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: 'Ok'
+          schema:
+            $ref: '#/definitions/personFacade'
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+    delete:
+      description: "API DEPRECIADA | The 'delete' request primitive for the person facade."
+      deprecated: true
+      tags:
+        - Apis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/parameters/clientId'
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Ok
+        default:
+          description: Error response
+          schema:
+            $ref: '#/definitions/genericError'
+
+definitions:
+
+  genderType:
+    type: string
+    enum:
+      - "MALE"
+      - "FEMALE"
+
+  maritalStatusType:
+    type: string
+    enum:
+      - "SINGLE"
+      - "MARRIED"
+      - "DIVORCED"
+      - "WIDOWER"
+      - "CONCUBINAGE"
+      - "SEPARATED"
+      - "STABLE_UNION"
+      - "OTHER"
+
+  emailType:
+    type: string
+    enum:
+      - "PERSONAL"
+      - "PROFESSIONAL"
+
+  phoneContactType:
+    type: string
+    enum:
+      - "PERSONAL"
+      - "PROFESSIONAL"
+      - "MOBILE"
+      - "BUSINESS_FAX"
+      - "PERSONAL_FAX"
+      - "OTHER"
+
+  disabilityType:
+    type: string
+    enum:
+      - "PHYSICAL"
+      - "HEARING"
+      - "VISUAL"
+      - "MENTAL"
+      - "INTELLECTUAL"
+      - "OTHER"
+
+  contractType:
+    type: string
+    enum:
+      - "EMPLOYEE"
+      - "MANAGER"
+      - "FARM_WORKER"
+      - "RETIRED"
+      - "TRAINEE"
+      - "APRENDIZ"
+      - "FIXED_DUE_DATE"
+      - "RETIRED_MANAGER"
+      - "PUBLIC_AGENT"
+      - "TEACHER"
+      - "COOPERATIVE_WORKER"
+      - "DOMESTIC_WORKER"
+      - "TEACHER_FIXED_DUE_DATE"
+      - "THIRD_PARTY"
+
+  employeeType:
+    type: string
+    enum:
+      - "EMPLOYEE"
+      - "THIRDPARTY"
+      - "PARTNER"
+
+  employmentRelationshipType:
+    type: string
+    enum:
+      - "EMPREGADO_GERAL"
+      - "EMPREGADO_TRABALHADOR_RURAL_POR_PEQUENO_PRAZO_DA_LEI_11_718_2008"
+      - "EMPREGADO_APRENDIZ"
+      - "EMPREGADO_DOMESTICO"
+      - "EMPREGADO_CONTRATO_A_TERMO_FIRMADO_NOS_TERMOS_DA_LEI_9601_98"
+      - "TRABALHADOR_TEMPORARIO_CONTRATO_NOS_TERMOS_DA_LEI_6019_74"
+      - "EMPREGADO_CONTRATO_DE_TRABALHO_VERDE_E_AMARELO_SEM_ACORDO_PARA_ANTECIPACAO_MENSAL_DA_MULTA_RESCISORIA_DO_FGTS"
+      - "EMPREGADO_CONTRATO_DE_TRABALHO_VERDE_E_AMARELO_COM_ACORDO_PARA_ANTECIPACAO_MENSAL_DA_MULTA_RESCISORIA_DO_FGTS"
+      - "EMPREGADO_CONTRATO_DE_TRABALHO_INTERMITENTE"
+      - "TRABALHADOR_AVULSO_PORTUARIO"
+      - "TRABALHADOR_AVULSO_NAO_PORTUARIO"
+      - "SERVIDOR_PUBLICO_TITULAR_DE_CARGO_EFETIVO_MAGISTRADO_MINISTRO_DE_TRIBUNAL_DE_CONTAS_CONSELHEIRO_DE_TRIBUNAL_CONTAS_E_MEMBRO_DO_MINISTERIO_PUBLICO"
+      - "SERVIDOR_PUBLICO_OCUPANTE_DE_CARGO_EXCLUSIVO_EM_COMISSAO"
+      - "EXERCENTE_DE_MANDATO_ELETIVO"
+      - "SERVIDOR_PUBLICO_EXERCENTE_DE_MANDATO_ELETIVO_INCLUSIVE_COM_EXERCICIO_DE_CARGO_EM_COMISSAO"
+      - "SERVIDOR_PUBLICO_INDICADO_PARA_CONSELHO_OU_ORGAO_REPRESENTATIVO_NA_CONDICAO_DE_REPRESENTANTE_DO_GOVERNO_ORGAO_OU_ENTIDADE_DA_ADMINISTRACAO_PUBLICA"
+      - "SERVIDOR_PUBLICO_CONTRATADO_POR_TEMPO_DETERMINADO_SUJEITO_A_REGIME_ADMINISTRATIVO_ESPECIAL_DEFINIDO_EM_LEI_PROPRIA"
+      - "MILITAR"
+      - "CONSCRITO"
+      - "AGENTE_PUBLICO_OUTROS"
+      - "SERVIDOR_PUBLICO_EVENTUAL"
+      - "MINISTROS_JUIZES_PROCURADORES_PROMOTORES_OU_OFICIAIS_DE_JUSTICA_A_DISPOSICAO_DA_JUSTICA_ELEITORAL"
+      - "AUXILIAR_LOCAL"
+      - "SERVIDOR_PUBLICO_EXERCENTE_DE_ATIVIDADE_DE_INSTRUTORIA_CAPACITACAO_TREINAMENTO_CURSO_OU_CONCURSO_OU_CONVOCADO_PARA_PARECERES_TECNICOS_OU_DEPOIMENTOS"
+      - "DIRIGENTE_SINDICAL_INFORMACAO_PRESTADA_PELO_SINDICATO"
+      - "TRABALHADOR_CEDIDO_EXERCICIO_EM_OUTRO_ORGAO_JUIZ_AUXILIAR_INFORMACAO_PRESTADA_PELO_CESSIONARIO_DESTINO"
+      - "CONTRIBUINTE_INDIVIDUAL_AUTONOMO_EM_GERAL_EXCETO_SE_ENQUADRADO_EM_UMA_DAS_DEMAIS_CATEGORIAS_DE_CONTRIBUINTE_INDIVIDUAL"
+      - "CONTRIBUINTE_INDIVIDUAL_TRANSPORTADOR_AUTONOMO_DE_PASSAGEIROS"
+      - "CONTRIBUINTE_INDIVIDUAL_TRANSPORTADOR_AUTONOMO_DE_CARGA"
+      - "CONTRIBUINTE_INDIVIDUAL_DIRETOR_NAO_EMPREGADO_COM_FGTS"
+      - "CONTRIBUINTE_INDIVIDUAL_DIRETOR_NAO_EMPREGADO_SEM_FGTS"
+      - "CONTRIBUINTE_INDIVIDUAL_EMPRESARIOS_SOCIOS_E_MEMBRO_DE_CONSELHO_DE_ADMINISTRACAO_OU_FISCAL"
+      - "CONTRIBUINTE_INDIVIDUAL_COOPERADO_QUE_PRESTA_SERVICOS_A_EMPRESA_POR_INTERMEDIO_DE_COOPERATIVA_DE_TRABALHO"
+      - "CONTRIBUINTE_INDIVIDUAL_TRANSPORTADOR_COOPERADO_QUE_PRESTA_SERVICOS_POR_INTERMEDIO_DE_COOPERATIVA_DE_TRABALHO"
+      - "CONTRIBUINTE_INDIVIDUAL_COOPERADO_FILIADO_A_COOPERATIVA_DE_PRODUCAO"
+      - "CONTRIBUINTE_INDIVIDUAL_MICRO_EMPREENDEDOR_INDIVIDUAL"
+      - "CONTRIBUINTE_INDIVIDUAL_MAGISTRADO_CLASSISTA_TEMPORARIO_DA_JUSTICA_DO_TRABALHO_OU_DA_JUSTICA_ELEITORAL_QUE_SEJA_APOSENTADO_DE_QUALQUER_REGIME_PREVIDENCIARIO"
+      - "CONTRIBUINTE_INDIVIDUAL_ASSOCIADO_ELEITO_PARA_DIRECAO_DE_COOPERATIVA_ASSOCIACAO_OU_ENTIDADE_DE_CLASSE_DE_QUALQUER_NATUREZA_OU_FINALIDADE_BEM_COMO_O_SINDICO_OU_ADM_DESDE_QUE_RECEBAM_REMUNERACAO"
+      - "CONTRIBUINTE_INDIVIDUAL_MEMBRO_DE_CONSELHO_TUTELAR_NOS_TERMOS_DA_LEI_N_8_069_DE_13_DE_JULHO_DE_1990"
+      - "MINISTRO_DE_CONFISSAO_RELIGIOSA_OU_MEMBRO_DE_VIDA_CONSAGRADA_DE_CONGREGACAO_OU_DE_ORDEM_RELIGIOSA"
+      - "ESTAGIARIO"
+      - "MEDICO_RESIDENTE"
+      - "BOLSISTA_NOS_TERMOS_DA_LEI_8958_1994"
+      - "PARTICIPANTE_DE_CURSO_DE_FORMACAO_COMO_ETAPA_DE_CONCURSO_PUBLICO_SEM_VINCULO_DE_EMPREGO_ESTATUTARIO"
+      - "ATLETA_NAO_PROFISSIONAL_EM_FORMACAO_QUE_RECEBA_BOLSA"
+      - "BENEFICIARIO_ENTE_PUBLICO"
+      - "BENEFICIARIO_ENTE_PUBLICO_SOMENTE_CADASTRO_BENEFICIO"
+      - "DEMITIDO_COM_DATA_ANTERIOR_A_SUCESSAO_CATEGORIA_EXCLUSIVA_SENIOR"
+      - "NAO_SE_APLICA"
+
+  companyType:
+    type: string
+    enum:
+      - "BRANCH_OFFICE"
+      - "HEAD_OFFICE"
+      - "WORK"
+      - "TEMPORARY"
+      - "WORK_COOPERATIVE"
+      - "DOMESTIC_WORKER"
+      - "EMPLOYER_ESOCIAL"
+
+  racialType:
+    type: string
+    enum:
+      - "NOT_INFORMED"
+      - "WHITE"
+      - "BLACK"
+      - "BROWN"
+      - "YELLOW"
+      - "INDIAN"
+
+  stabilityType:
+    type: string
+    enum:
+      - "NOT_STABLE"
+      - "ELECTED_CIPA"
+      - "WORK_ACCIDENT"
+      - "MATERNITY_ASSISTANCE"
+      - "MILITARY_SERVICE"
+      - "UNION_MANDATE"
+      - "GOVERNMENT_EMPLOYEE"
+      - "RETURN_HOLIDAYS"
+      - "SICK_PAY"
+      - "NEAR_RETIREMENT"
+      - "COLLECTIVE_AGREEMENT"
+      - "PREVIOUS_TIME_FGTS_OPTION"
+      - "NOT_OPTING_FGTS"
+      - "CIPA_EMPLOYER"
+      - "MEMBER_OF_COMISSION_FOR_PRIOR_CONCILIATION"
+      - "MEMBER_OF_FGTS_CURATOR_COUNCIL"
+      - "MEMBER_OF_NATIONAL_COUNCIL_OF_SOCIAL_SECURITY"
+      - "EDUCATION_AID"
+      - "CONSUMER_COOPERATIVE"
+      - "CREDIT_UNION"
+      - "PERSON_WITH_DISABILITY"
+      - "COOPERATIVE_OF_SYNDICATE"
+      - "CIPATR"
+      - "PATERNITY_LEAVE"
+      - "ELECTORAL_MANDATE"
+      - "CIPA_CANDIDATE"
+      - "ELECT_ALTERNATE_CIPA"
+      - "OTHER"
+      - "ELECTED_EMPLOYEE_REPRESENTATIVES_COMMITTEE"
+      - "JOURNEY_REDUCTION_COVID_19_25_50"
+      - "JOURNEY_REDUCTION_COVID_19_50_70"
+      - "JOURNEY_REDUCTION_COVID_19_70"
+      - "TEMPORARY_SUSPENSION_COVID_19"
+      - "GESTATION_PERIOD"
+
+  addressResponse:
+    type: object
+    required:
+      - additional
+      - neighborhood
+      - address
+      - city
+      - person
+    properties:
+        id:
+          type: string
+          description: 'ID do endereço'
+        additional:
+          type: string
+          description: 'Informação adicional referente ao endereço. (e.g. Número do apartamento, Bloco do residencial, Ponto de referência)'
+        neighborhood:
+          type: string
+          description: 'Bairro/Distrito a qual pertence este endereço'
+        address:
+          type: string
+          description: 'Logradouro/Rua a qual pertence este endereço'
+        city:
+          $ref: '#/definitions/cityRecord'
+        person:
+          type: string
+          description: 'ID da pessoa com esse endereço'
+
+  cityRecord:
+    type: object
+    required:
+      - name
+      - state
+      - code
+    properties:
+        id:
+          type: string
+          description: 'ID da Cidade'
+        name:
+          type: string
+          description: 'Nome da Cidade'
+        state:
+          $ref: '#/definitions/stateRecord'
+        code:
+          type: integer
+          description: 'Código G5'
+
+  stateRecord:
+    type: object
+    required:
+      - abbreviation
+      - name
+      - code
+    properties:
+        id:
+          type: string
+          description: 'ID do Estado'
+        abbreviation:
+          type: string
+          description: 'Sigla'
+        name:
+          type: string
+          description: 'Nome do Estado'
+        code:
+          type: integer
+          description: 'Código G5'
+
+  personResponse__2:
+    type: object
+    required:
+      - firstname
+      - lastname
+      - socialName
+      - nickname
+      - gender
+      - maritalstatus
+      - ethnicity
+      - nationality
+      - educationDegree
+    properties:
+        id:
+          type: string
+          description: 'ID da Pessoa'
+        firstname:
+          type: string
+          description: 'Primeiro nome da pessoa'
+        middlename:
+          type: string
+          description: 'Segundo nome da pessoa'
+        lastname:
+          type: string
+          description: 'Último nome da pessoa (Sobrenome)'
+        socialName:
+          type: string
+          description: 'Nome social'
+        nickname:
+          type: string
+          description: 'Apelido da pessoa'
+        fullName:
+          type: string
+          description: 'Nome completo'
+        birthday:
+          type: string
+          description: 'Data de nascimento da pessoa'
+          format: "date"
+        gender:
+          $ref: '#/definitions/genderType'
+        maritalstatus:
+          $ref: '#/definitions/maritalStatusType'
+        ethnicity:
+          $ref: '#/definitions/ethnicityRecord'
+        cpf:
+          type: string
+          description: 'CPF (Cadastro de Pessoas Físicas) da pessoa'
+        nis:
+          type: array
+          items:
+            $ref: '#/definitions/nisRecord'
+          description: 'Programa Integração Social (pis)'
+        emails:
+          type: array
+          items:
+            $ref: '#/definitions/emailRecord'
+          description: 'E-mails da pessoa'
+        nationality:
+          $ref: '#/definitions/nationalityRecord'
+        naturality:
+          $ref: '#/definitions/cityRecord'
+        educationDegree:
+          $ref: '#/definitions/educationDegreeRecord'
+        phoneContact:
+          type: array
+          items:
+            $ref: '#/definitions/phoneContactRecord'
+          description: 'Contato telefônico'
+        addresses:
+          type: array
+          items:
+            type: string
+          description: 'ID do endereço da pessoa'
+        disabilities:
+          type: array
+          items:
+            $ref: '#/definitions/personDisabilityRecord'
+          description: 'Deficiências'
+
+  ethnicityRecord:
+    type: object
+    required:
+      - id
+      - name
+      - code
+    properties:
+        id:
+          type: string
+          description: 'Identificador da etnia'
+        name:
+          type: string
+          description: 'Nome da etnia'
+        code:
+          type: integer
+          description: 'código de etnia'
+
+  nisRecord:
+    type: object
+    properties:
+        id:
+          type: string
+          description: 'Id do documento'
+        number:
+          type: string
+          description: 'Número do documento'
+        registrationDate:
+          type: string
+          description: 'Data de registro do documento'
+          format: "date"
+
+  emailRecord:
+    type: object
+    required:
+      - email
+      - emailType
+    properties:
+        id:
+          type: string
+          description: 'ID do email'
+        email:
+          type: string
+          description: 'Email da pessoa'
+        emailType:
+          $ref: '#/definitions/emailType'
+
+  nationalityRecord:
+    type: object
+    properties:
+        id:
+          type: string
+          description: 'ID Nacionalidade'
+        name:
+          type: string
+          description: 'Nome Nacionalidade'
+        code:
+          type: integer
+          description: 'Código G5'
+
+  educationDegreeRecord:
+    type: object
+    properties:
+        id:
+          type: string
+          description: 'ID grau de educação'
+        name:
+          type: string
+          description: 'Nome Grau de Educação'
+        code:
+          type: integer
+          description: 'Código de Grau de Instrução'
+
+  phoneContactRecord:
+    type: object
+    required:
+      - carrier
+      - countryCode
+      - localCode
+      - number
+      - extention
+      - phoneContactType
+    properties:
+        id:
+          type: string
+          description: 'ID do telefone de contato'
+        carrier:
+          type: string
+          description: 'Operador'
+        countryCode:
+          type: integer
+          description: 'Código do País'
+        localCode:
+          type: integer
+          description: 'DDD'
+        number:
+          type: string
+          description: 'Número'
+        extention:
+          type: string
+          description: 'extensão'
+        phoneContactType:
+          $ref: '#/definitions/phoneContactType'
+
+  personDisabilityRecord:
+    type: object
+    required:
+      - disability
+      - mainDisability
+      - isRehabilitated
+      - dateWhen
+    properties:
+        id:
+          type: string
+          description: 'ID da entidade'
+        disability:
+          $ref: '#/definitions/disabilityRecord'
+        mainDisability:
+          type: boolean
+          description: 'Deficiência principal'
+        isRehabilitated:
+          type: boolean
+          description: 'é uma pessoa reabilitada'
+        dateWhen:
+          type: string
+          description: 'Data da deficiência'
+          format: "date"
+
+  disabilityRecord:
+    type: object
+    required:
+      - code
+      - name
+      - type
+    properties:
+        id:
+          type: string
+          description: 'ID da entidade'
+        code:
+          type: integer
+          description: 'Código da deficiência'
+        name:
+          type: string
+          description: 'Nome da deficiência'
+        type:
+          $ref: '#/definitions/disabilityType'
+
+  employeeResponse:
+    type: object
+    required:
+      - contractType
+      - hireDate
+      - dismissalDate
+      - employeeType
+      - employmentrelationshiptype
+      - jobPosition
+      - department
+      - costCenter
+      - workShift
+      - workstation
+    properties:
+        id:
+          type: string
+          description: 'ID do Colaborador'
+        contractType:
+          $ref: '#/definitions/contractType'
+        hireDate:
+          type: string
+          description: 'Data de admissão'
+          format: "date"
+        dismissalDate:
+          type: string
+          description: 'Data de demissão'
+          format: "date"
+        employeeType:
+          $ref: '#/definitions/employeeType'
+        registerNumber:
+          type: integer
+          description: 'Número da matrícula na G5 (numcad)'
+        employmentrelationshiptype:
+          $ref: '#/definitions/employmentRelationshipType'
+        jobPosition:
+          $ref: '#/definitions/jobPositionRecord'
+        department:
+          $ref: '#/definitions/departmentRecord'
+        costCenter:
+          $ref: '#/definitions/costCenterRecord'
+        workShift:
+          $ref: '#/definitions/workShiftRecord'
+        employer:
+          $ref: '#/definitions/companyRecord'
+        person:
+          $ref: '#/definitions/personRecord'
+        phoneContact:
+          type: array
+          items:
+            $ref: '#/definitions/phoneContactRecord'
+          description: 'Contato telefônico'
+        emails:
+          type: array
+          items:
+            $ref: '#/definitions/employeeEmailRecord'
+          description: 'Emails vinculado ao colaborador'
+        workstation:
+          $ref: '#/definitions/workstationRecord'
+        historicStability:
+          type: array
+          items:
+            $ref: '#/definitions/historicStabilityRecord'
+          description: 'Histórico de estabilidade'
+
+  jobPositionRecord:
+    type: object
+    required:
+      - codcar
+    properties:
+        id:
+          type: string
+          description: 'ID do Cargo'
+        name:
+          type: string
+          description: 'Nome do cargo'
+        codcar:
+          type: string
+          description: 'Código do Cargo'
+
+  departmentRecord:
+    type: object
+    properties:
+        id:
+          type: string
+          description: 'ID Departamento'
+        tableCode:
+          type: integer
+          description: 'Tabela de organograma'
+        position:
+          type: string
+          description: 'Posição'
+        address:
+          $ref: '#/definitions/addressRecord'
+        code:
+          type: string
+          description: 'Código G5 do departamento/local (codloc)'
+        name:
+          type: string
+          description: 'Nome do departamento'
+        creationDate:
+          type: string
+          description: 'Data de criação'
+          format: "date"
+        expirationDate:
+          type: string
+          description: 'Data de expiração'
+          format: "date"
+        historicExpirationDate:
+          type: string
+          description: 'Histórico data de expiração'
+          format: "date"
+
+  addressRecord:
+    type: object
+    required:
+      - additional
+      - neighborhood
+      - address
+      - city
+    properties:
+        id:
+          type: string
+          description: 'ID do endereço'
+        additional:
+          type: string
+          description: 'Informação adicional referente ao endereço. (e.g. Número do apartamento, Bloco do residencial, Ponto de referência)'
+        neighborhood:
+          type: string
+          description: 'Bairro/Distrito a qual pertence este endereço'
+        address:
+          type: string
+          description: 'Logradouro/Rua a qual pertence este endereço'
+        city:
+          $ref: '#/definitions/cityRecord'
+
+  costCenterRecord:
+    type: object
+    required:
+      - codccu
+    properties:
+        id:
+          type: string
+          description: 'ID da entidade'
+        name:
+          type: string
+          description: 'Nome do centro de custo'
+        codccu:
+          type: string
+          description: 'Código do centro de custo'
+        descriptionCode:
+          type: string
+          description: 'Descrição do código'
+        creationDate:
+          type: string
+          description: 'Data de criação'
+          format: "date"
+        expirationDate:
+          type: string
+          description: 'Data de expiração'
+          format: "date"
+        company:
+          $ref: '#/definitions/companyRecord'
+
+  companyRecord:
+    type: object
+    properties:
+        id:
+          type: string
+          description: 'ID da empresa'
+        numemp:
+          type: integer
+          description: 'Código da empresa'
+        tradingName:
+          type: string
+          description: 'Nome Social'
+        companyName:
+          type: string
+          description: 'Nome da Empresa'
+        cnpj:
+          type: string
+          description: 'CNPJ'
+        companyType:
+          $ref: '#/definitions/companyType'
+        cnae:
+          type: string
+          description: 'CNAE da empresa'
+        address:
+          $ref: '#/definitions/addressRecord'
+        headquarter:
+          $ref: '#/definitions/companyRecord'
+
+  workShiftRecord:
+    type: object
+    required:
+      - name
+      - codesc
+      - workload
+    properties:
+        id:
+          type: string
+          description: 'ID do turno'
+        name:
+          type: string
+          description: 'Descrição do turno'
+        codesc:
+          type: integer
+          description: 'Código do turno'
+        workload:
+          type: integer
+          description: 'Carga horária do turno (em min/mês)'
+
+  personRecord:
+    type: object
+    required:
+      - firstname
+      - lastname
+      - socialName
+      - nickname
+      - fullName
+      - gender
+      - maritalstatus
+      - race
+      - ethnicity
+      - nationality
+      - naturality
+      - educationDegree
+    properties:
+        id:
+          type: string
+          description: 'ID da Pessoa'
+        firstname:
+          type: string
+          description: 'Primeiro nome da pessoa'
+        middlename:
+          type: string
+          description: 'Segundo nome da pessoa'
+        lastname:
+          type: string
+          description: 'Último nome da pessoa (Sobrenome)'
+        socialName:
+          type: string
+          description: 'Nome social'
+        nickname:
+          type: string
+          description: 'Apelido da pessoa'
+        fullName:
+          type: string
+          description: 'Nome completo'
+        birthday:
+          type: string
+          description: 'Data de nascimento da pessoa'
+          format: "date"
+        gender:
+          $ref: '#/definitions/genderType'
+        maritalstatus:
+          $ref: '#/definitions/maritalStatusType'
+        race:
+          $ref: '#/definitions/racialType'
+        ethnicity:
+          $ref: '#/definitions/ethnicityRecord'
+        cpf:
+          type: string
+          description: 'CPF (Cadastro de Pessoas Físicas) da pessoa'
+        nis:
+          type: array
+          items:
+            $ref: '#/definitions/nisRecord'
+          description: 'Programa Integração Social (pis)'
+        emails:
+          type: array
+          items:
+            $ref: '#/definitions/emailRecord'
+          description: 'E-mails da pessoa'
+        nationality:
+          $ref: '#/definitions/nationalityRecord'
+        naturality:
+          $ref: '#/definitions/cityRecord'
+        educationDegree:
+          $ref: '#/definitions/educationDegreeRecord'
+        phoneContact:
+          type: array
+          items:
+            $ref: '#/definitions/phoneContactRecord'
+          description: 'Contato telefônico'
+        address:
+          type: array
+          items:
+            $ref: '#/definitions/addressRecord'
+          description: 'ID do endereço da pessoa'
+        disabilities:
+          type: array
+          items:
+            $ref: '#/definitions/personDisabilityRecord'
+          description: 'Deficiências'
+
+  employeeEmailRecord:
+    type: object
+    required:
+      - id
+      - email
+    properties:
+        id:
+          type: string
+          description: 'ID do email'
+        email:
+          type: string
+          description: 'E-mail da pessoal vinculada'
+
+  workstationRecord:
+    type: object
+    required:
+      - id
+      - workstationGroup
+    properties:
+        id:
+          type: string
+          description: 'ID da entidade'
+        workstationGroup:
+          $ref: '#/definitions/workstationGroupRecord'
+        hierarchyItem:
+          $ref: '#/definitions/hierarchyItemRecord'
+
+  workstationGroupRecord:
+    type: object
+    required:
+      - id
+      - postra
+    properties:
+        id:
+          type: string
+          description: 'ID da entidade'
+        name:
+          type: string
+          description: 'Nome do grupo de trabalho'
+        postra:
+          type: string
+          description: 'Código do posto de Trabalho'
+
+  hierarchyItemRecord:
+    type: object
+    required:
+      - id
+      - parent
+    properties:
+        id:
+          type: string
+          description: 'ID do item'
+        parent:
+          $ref: '#/definitions/hierarchyItemRecord'
+
+  historicStabilityRecord:
+    type: object
+    required:
+      - id
+      - startDate
+      - endDate
+      - stabilityType
+    properties:
+        id:
+          type: string
+          description: 'Identificador do histórico de estabilidade'
+        startDate:
+          type: string
+          description: 'Data de início da estabilidade'
+          format: "date"
+        endDate:
+          type: string
+          description: 'Data final da estabilidade'
+          format: "date"
+        stabilityType:
+          $ref: '#/definitions/stabilityType'
+
+  departmentResponse:
+    type: object
+    properties:
+        id:
+          type: string
+          description: 'ID Departamento'
+        tableCode:
+          type: integer
+          description: 'Tabela de organograma'
+        position:
+          type: string
+          description: 'Posição'
+        address:
+          $ref: '#/definitions/addressRecord'
+        code:
+          type: string
+          description: 'Código G5 do departamento/local (codloc)'
+        name:
+          type: string
+          description: 'Nome do departamento'
+        creationDate:
+          type: string
+          description: 'Data de criação'
+          format: "date"
+        expirationDate:
+          type: string
+          description: 'Data de expiração'
+          format: "date"
+        historicExpirationDate:
+          type: string
+          description: 'Histórico data de expiração'
+          format: "date"
+
+  companyResponse:
+    type: object
+    properties:
+        id:
+          type: string
+          description: 'ID da empresa'
+        numemp:
+          type: integer
+          description: 'Código da empresa'
+        tradingName:
+          type: string
+          description: 'Nome Social'
+        companyName:
+          type: string
+          description: 'Nome da Empresa'
+        cnpj:
+          type: string
+          description: 'CNPJ'
+        companyType:
+          $ref: '#/definitions/companyType'
+        cnae:
+          type: string
+          description: 'CNAE da empresa'
+        address:
+          $ref: '#/definitions/addressRecord'
+        headquarter:
+          $ref: '#/definitions/companyRecord'
+
+  companyWithBranchesResponse:
+    type: object
+    properties:
+        id:
+          type: string
+          description: 'ID da matriz'
+        numemp:
+          type: integer
+          description: 'Código da matriz'
+        tradingName:
+          type: string
+          description: 'Nome fantasia da matriz'
+        companyName:
+          type: string
+          description: 'Nome da matriz'
+        cnpj:
+          type: string
+          description: 'CNPJ'
+        companyType:
+          $ref: '#/definitions/companyType'
+        cnae:
+          type: string
+          description: 'CNAE da matriz'
+        address:
+          $ref: '#/definitions/addressRecord'
+        companyBranches:
+          type: array
+          items:
+            $ref: '#/definitions/companyBranchesRecord'
+          description: 'Filiais'
+
+  companyBranchesRecord:
+    type: object
+    properties:
+        id:
+          type: string
+          description: 'ID da filial'
+        numemp:
+          type: integer
+          description: 'Código da filial'
+        tradingName:
+          type: string
+          description: 'Nome fantasia da filial'
+        companyName:
+          type: string
+          description: 'Nome da filial'
+        cnpj:
+          type: string
+          description: 'CNPJ'
+        companyType:
+          $ref: '#/definitions/companyType'
+        cnae:
+          type: string
+          description: 'CNAE da filial'
+        address:
+          $ref: '#/definitions/addressRecord'
+
+  costCenterResponse:
+    type: object
+    required:
+      - codccu
+    properties:
+        id:
+          type: string
+          description: 'ID do Centro de Custo'
+        name:
+          type: string
+          description: 'Nome do centro de custo'
+        codccu:
+          type: string
+          description: 'Código do centro de custo'
+        descriptionCode:
+          type: string
+          description: 'Descrição do código'
+        creationDate:
+          type: string
+          description: 'Data de criação'
+          format: "date"
+        expirationDate:
+          type: string
+          description: 'Data de expiração'
+          format: "date"
+        company:
+          $ref: '#/definitions/companyRecord'
+
+  person:
+    type: object
+    required:
+      - firstname
+      - lastname
+      - socialName
+      - nickname
+      - gender
+      - maritalstatus
+      - race
+      - nationality
+      - educationDegree
+    properties:
+        id:
+          type: string
+          description: 'ID da Pessoa'
+        firstname:
+          type: string
+          description: 'Primeiro nome da pessoa'
+        middlename:
+          type: string
+          description: 'Segundo nome da pessoa'
+        lastname:
+          type: string
+          description: 'Último nome da pessoa (Sobrenome)'
+        socialName:
+          type: string
+          description: 'Nome social'
+        nickname:
+          type: string
+          description: 'Apelido da pessoa'
+        fullName:
+          type: string
+          description: 'Nome completo da pessoa'
+        birthday:
+          type: string
+          description: 'Data de nascimento da pessoa'
+          format: "date"
+        gender:
+          $ref: '#/definitions/genderType'
+        maritalstatus:
+          $ref: '#/definitions/maritalStatusType'
+        race:
+          $ref: '#/definitions/racialType'
+        cpf:
+          type: string
+          description: 'CPF (Cadastro de Pessoas Físicas) da pessoa'
+        nis:
+          type: array
+          items:
+            $ref: '#/definitions/nisRecord'
+          description: 'Programa Integração Social (pis)'
+        emails:
+          type: array
+          items:
+            $ref: '#/definitions/emailRecord'
+          description: 'E-mails da pessoa'
+        nationality:
+          $ref: '#/definitions/nationalityRecord'
+        naturality:
+          $ref: '#/definitions/cityRecord'
+        educationDegree:
+          $ref: '#/definitions/educationDegreeRecord'
+        phoneContact:
+          type: array
+          items:
+            $ref: '#/definitions/phoneContactRecord'
+          description: 'Contato telefônico'
+        addresses:
+          type: array
+          items:
+            type: string
+          description: 'ID do endereço da pessoa'
+        disabilities:
+          type: array
+          items:
+            $ref: '#/definitions/personDisabilityRecord'
+          description: 'Deficiências'
+
+  address:
+    type: object
+    required:
+      - address
+      - additional
+      - neighborhood
+      - city
+      - person
+    properties:
+        id:
+          type: string
+          description: 'ID do endereço'
+        address:
+          type: string
+          description: '&#10;            Logradouro/Rua a qual pertence este endereço'
+        additional:
+          type: string
+          description: 'Informação adicional referente ao endereço. (e.g. Número do apartamento, Bloco do residencial, Ponto de referência)'
+        neighborhood:
+          type: string
+          description: 'Bairro/Distrito a qual pertence este endereço'
+        city:
+          $ref: '#/definitions/cityRecord'
+        person:
+          type: string
+          description: 'ID da pessoa com esse endereço'
+
+  company:
+    type: object
+    properties:
+        id:
+          type: string
+          description: 'ID da empresa'
+        numemp:
+          type: integer
+          description: 'Código da empresa'
+        tradingName:
+          type: string
+          description: 'Nome Social'
+        companyName:
+          type: string
+          description: 'Nome da Empresa'
+        cnpj:
+          type: string
+          description: 'CNPJ'
+        companyType:
+          $ref: '#/definitions/companyType'
+        cnae:
+          type: string
+          description: 'CNAE da empresa'
+        address:
+          $ref: '#/definitions/addressRecord'
+        headquarter:
+          $ref: '#/definitions/companyRecord'
+
+  companyWithBranches:
+    type: object
+    properties:
+        id:
+          type: string
+          description: 'ID da matriz'
+        numemp:
+          type: integer
+          description: 'Código da matriz'
+        tradingName:
+          type: string
+          description: 'Nome fantasia da matriz'
+        companyName:
+          type: string
+          description: 'Nome da matriz'
+        cnpj:
+          type: string
+          description: 'CNPJ'
+        companyType:
+          $ref: '#/definitions/companyType'
+        cnae:
+          type: string
+          description: 'CNAE da matriz'
+        address:
+          $ref: '#/definitions/addressRecord'
+        companyBranches:
+          type: array
+          items:
+            $ref: '#/definitions/companyBranchesRecord'
+          description: 'Filiais'
+
+  employee:
+    type: object
+    required:
+      - contractType
+      - hireDate
+      - dismissalDate
+      - employeeType
+      - employmentrelationshiptype
+      - jobPosition
+      - department
+      - costCenter
+      - workShift
+      - workstation
+    properties:
+        id:
+          type: string
+          description: 'ID do Colaborador'
+        contractType:
+          $ref: '#/definitions/contractType'
+        hireDate:
+          type: string
+          description: 'Data de admissão'
+          format: "date"
+        dismissalDate:
+          type: string
+          description: 'Data de demissão'
+          format: "date"
+        employeeType:
+          $ref: '#/definitions/employeeType'
+        registerNumber:
+          type: integer
+          description: 'Número da matrícula na G5 (numcad)'
+        employmentrelationshiptype:
+          $ref: '#/definitions/employmentRelationshipType'
+        jobPosition:
+          $ref: '#/definitions/jobPositionRecord'
+        department:
+          $ref: '#/definitions/departmentRecord'
+        costCenter:
+          $ref: '#/definitions/costCenterRecord'
+        workShift:
+          $ref: '#/definitions/workShiftRecord'
+        employer:
+          $ref: '#/definitions/companyRecord'
+        person:
+          $ref: '#/definitions/personRecord'
+        phoneContact:
+          type: array
+          items:
+            $ref: '#/definitions/phoneContactRecord'
+          description: 'Contato telefônico'
+        emails:
+          type: array
+          items:
+            $ref: '#/definitions/employeeEmailRecord'
+          description: 'Emails vinculado ao colaborador'
+        workstation:
+          $ref: '#/definitions/workstationRecord'
+        historicStability:
+          type: array
+          items:
+            $ref: '#/definitions/historicStabilityRecord'
+          description: 'Histórico de estabilidade'
+
+  department:
+    type: object
+    properties:
+        id:
+          type: string
+          description: 'ID Departamento'
+        tableCode:
+          type: integer
+          description: 'Tabela de organograma'
+        code:
+          type: string
+          description: 'Código G5 do departamento/local (codloc)'
+        position:
+          type: string
+          description: 'Posição'
+        name:
+          type: string
+          description: 'Nome do departamento'
+        creationDate:
+          type: string
+          description: 'Data de criação'
+          format: "date"
+        expirationDate:
+          type: string
+          description: 'Data de expiração'
+          format: "date"
+        historicExpirationDate:
+          type: string
+          description: 'Histórico data de expiração'
+          format: "date"
+        address:
+          $ref: '#/definitions/addressRecord'
+
+  costCenter:
+    type: object
+    properties:
+        id:
+          type: string
+          description: 'Id Centro de Custo'
+        name:
+          type: string
+          description: 'Nome do centro de custo'
+        codccu:
+          type: string
+          description: 'Código do centro de custo'
+        descriptionCode:
+          type: string
+          description: 'Descrição código'
+        creationDate:
+          type: string
+          description: 'Data de criação'
+          format: "date"
+        expirationDate:
+          type: string
+          description: 'Data de expiração'
+          format: "date"
+        company:
+          $ref: '#/definitions/companyRecord'
+
+  addressFacade:
+    type: object
+    required:
+      - address
+      - additional
+      - neighborhood
+      - city
+      - person
+    properties:
+        id:
+          type: string
+          description: 'ID do endereço'
+        address:
+          type: string
+          description: '&#10;                Logradouro/Rua a qual pertence este endereço'
+        additional:
+          type: string
+          description: 'Informação adicional referente ao endereço. (e.g. Número do apartamento, Bloco do residencial, Ponto de referência)'
+        neighborhood:
+          type: string
+          description: 'Bairro/Distrito a qual pertence este endereço'
+        city:
+          $ref: '#/definitions/cityRecord'
+        person:
+          type: string
+          description: 'ID da pessoa com esse endereço'
+
+  companyFacade:
+    type: object
+    properties:
+        id:
+          type: string
+          description: 'ID da empresa'
+        numemp:
+          type: integer
+          description: 'Código da empresa'
+        tradingName:
+          type: string
+          description: 'Nome Social'
+        companyName:
+          type: string
+          description: 'Nome da Empresa'
+        cnpj:
+          type: string
+          description: 'CNPJ'
+        companyType:
+          $ref: '#/definitions/companyType'
+        cnae:
+          type: string
+          description: 'CNAE da empresa'
+        address:
+          $ref: '#/definitions/addressRecord'
+        headquarter:
+          $ref: '#/definitions/companyRecord'
+
+  companyWithBranchesFacade:
+    type: object
+    properties:
+        id:
+          type: string
+          description: 'ID da matriz'
+        numemp:
+          type: integer
+          description: 'Código da matriz'
+        tradingName:
+          type: string
+          description: 'Nome fantasia da matriz'
+        companyName:
+          type: string
+          description: 'Nome da matriz'
+        cnpj:
+          type: string
+          description: 'CNPJ'
+        companyType:
+          $ref: '#/definitions/companyType'
+        cnae:
+          type: string
+          description: 'CNAE da matriz'
+        address:
+          $ref: '#/definitions/addressRecord'
+        companyBranches:
+          type: array
+          items:
+            $ref: '#/definitions/companyBranchesRecord'
+          description: 'Filiais'
+
+  costCenterFacade:
+    type: object
+    properties:
+        id:
+          type: string
+          description: 'Id Centro de Custo'
+        name:
+          type: string
+          description: 'Nome do centro de custo'
+        codccu:
+          type: string
+          description: 'Código do centro de custo'
+        descriptionCode:
+          type: string
+          description: 'Descrição código'
+        creationDate:
+          type: string
+          description: 'Data de criação'
+          format: "date"
+        expirationDate:
+          type: string
+          description: 'Data de expiração'
+          format: "date"
+        company:
+          $ref: '#/definitions/companyRecord'
+
+  departmentFacade:
+    type: object
+    properties:
+        id:
+          type: string
+          description: 'ID Departamento'
+        tableCode:
+          type: integer
+          description: 'Tabela de organograma'
+        code:
+          type: string
+          description: 'Código G5 do departamento/local (codloc)'
+        position:
+          type: string
+          description: 'Posição'
+        name:
+          type: string
+          description: 'Nome do departamento'
+        creationDate:
+          type: string
+          description: 'Data de criação'
+          format: "date"
+        expirationDate:
+          type: string
+          description: 'Data de expiração'
+          format: "date"
+        historicExpirationDate:
+          type: string
+          description: 'Histórico data de expiração'
+          format: "date"
+        address:
+          $ref: '#/definitions/addressRecord'
+
+  employeeFacade:
+    type: object
+    required:
+      - contractType
+      - hireDate
+      - dismissalDate
+      - employeeType
+      - employmentrelationshiptype
+      - jobPosition
+      - department
+      - costCenter
+      - workShift
+      - workstation
+    properties:
+        id:
+          type: string
+          description: 'ID do Colaborador'
+        contractType:
+          $ref: '#/definitions/contractType'
+        hireDate:
+          type: string
+          description: 'Data de admissão'
+          format: "date"
+        dismissalDate:
+          type: string
+          description: 'Data de demissão'
+          format: "date"
+        employeeType:
+          $ref: '#/definitions/employeeType'
+        registerNumber:
+          type: integer
+          description: 'Número da matrícula na G5 (numcad)'
+        employmentrelationshiptype:
+          $ref: '#/definitions/employmentRelationshipType'
+        jobPosition:
+          $ref: '#/definitions/jobPositionRecord'
+        department:
+          $ref: '#/definitions/departmentRecord'
+        costCenter:
+          $ref: '#/definitions/costCenterRecord'
+        workShift:
+          $ref: '#/definitions/workShiftRecord'
+        employer:
+          $ref: '#/definitions/companyRecord'
+        person:
+          $ref: '#/definitions/personRecord'
+        phoneContact:
+          type: array
+          items:
+            $ref: '#/definitions/phoneContactRecord'
+          description: 'Contato telefônico'
+        emails:
+          type: array
+          items:
+            $ref: '#/definitions/employeeEmailRecord'
+          description: 'Emails vinculado ao colaborador'
+        workstation:
+          $ref: '#/definitions/workstationRecord'
+        historicStability:
+          type: array
+          items:
+            $ref: '#/definitions/historicStabilityRecord'
+          description: 'Histórico de estabilidade'
+
+  personFacade:
+    type: object
+    required:
+      - firstname
+      - lastname
+      - socialName
+      - nickname
+      - gender
+      - maritalstatus
+      - race
+      - nationality
+      - educationDegree
+    properties:
+        id:
+          type: string
+          description: 'ID da Pessoa'
+        firstname:
+          type: string
+          description: 'Primeiro nome da pessoa'
+        middlename:
+          type: string
+          description: 'Segundo nome da pessoa'
+        lastname:
+          type: string
+          description: 'Último nome da pessoa (Sobrenome)'
+        socialName:
+          type: string
+          description: 'Nome social'
+        nickname:
+          type: string
+          description: 'Apelido da pessoa'
+        fullName:
+          type: string
+          description: 'Nome completo da pessoa'
+        birthday:
+          type: string
+          description: 'Data de nascimento da pessoa'
+          format: "date"
+        gender:
+          $ref: '#/definitions/genderType'
+        maritalstatus:
+          $ref: '#/definitions/maritalStatusType'
+        race:
+          $ref: '#/definitions/racialType'
+        cpf:
+          type: string
+          description: 'CPF (Cadastro de Pessoas Físicas) da pessoa'
+        nis:
+          type: array
+          items:
+            $ref: '#/definitions/nisRecord'
+          description: 'Programa Integração Social (pis)'
+        emails:
+          type: array
+          items:
+            $ref: '#/definitions/emailRecord'
+          description: 'E-mails da pessoa'
+        nationality:
+          $ref: '#/definitions/nationalityRecord'
+        naturality:
+          $ref: '#/definitions/cityRecord'
+        educationDegree:
+          $ref: '#/definitions/educationDegreeRecord'
+        phoneContact:
+          type: array
+          items:
+            $ref: '#/definitions/phoneContactRecord'
+          description: 'Contato telefônico'
+        addresses:
+          type: array
+          items:
+            type: string
+          description: 'ID do endereço da pessoa'
+        disabilities:
+          type: array
+          items:
+            $ref: '#/definitions/personDisabilityRecord'
+          description: 'Deficiências'
+
+  personFacade__2:
+    type: object
+    properties:
+        id:
+          type: string
+          description: 'ID da Pessoa'
+        firstname:
+          type: string
+          description: 'Primeiro nome da pessoa'
+        middlename:
+          type: string
+          description: 'Segundo nome da pessoa'
+        lastname:
+          type: string
+          description: 'Último nome da pessoa (Sobrenome)'
+        socialName:
+          type: string
+          description: 'Nome social'
+        nickname:
+          type: string
+          description: 'Apelido da pessoa'
+        fullName:
+          type: string
+          description: 'Nome completo da pessoa'
+        birthday:
+          type: string
+          description: 'Data de nascimento da pessoa'
+          format: "date"
+        gender:
+          $ref: '#/definitions/genderType'
+        maritalstatus:
+          $ref: '#/definitions/maritalStatusType'
+        ethnicity:
+          $ref: '#/definitions/ethnicityRecord'
+        cpf:
+          type: string
+          description: 'CPF (Cadastro de Pessoas Físicas) da pessoa'
+        nis:
+          type: array
+          items:
+            $ref: '#/definitions/nisRecord'
+          description: 'Programa Integração Social (pis)'
+        emails:
+          type: array
+          items:
+            $ref: '#/definitions/emailRecord'
+          description: 'E-mails da pessoa'
+        nationality:
+          $ref: '#/definitions/nationalityRecord'
+        naturality:
+          $ref: '#/definitions/cityRecord'
+        educationDegree:
+          $ref: '#/definitions/educationDegreeRecord'
+        phoneContact:
+          type: array
+          items:
+            $ref: '#/definitions/phoneContactRecord'
+          description: 'Contato telefônico'
+        addresses:
+          type: array
+          items:
+            type: string
+          description: 'ID do endereço da pessoa'
+        disabilities:
+          type: array
+          items:
+            $ref: '#/definitions/personDisabilityRecord'
+          description: 'Deficiências'
+
+  employeeFacade__2:
+    type: object
+    properties:
+        id:
+          type: string
+          description: 'ID do Colaborador'
+        contractType:
+          $ref: '#/definitions/contractType'
+        hireDate:
+          type: string
+          description: 'Data de admissão'
+          format: "date"
+        dismissalDate:
+          type: string
+          description: 'Data de demissão'
+          format: "date"
+        employeeType:
+          $ref: '#/definitions/employeeType'
+        registerNumber:
+          type: integer
+          description: 'Número da matrícula na G5 (numcad)'
+        employmentrelationshiptype:
+          $ref: '#/definitions/employmentRelationshipType'
+        jobPosition:
+          $ref: '#/definitions/jobPositionRecord'
+        department:
+          $ref: '#/definitions/departmentRecord'
+        costCenter:
+          $ref: '#/definitions/costCenterRecord'
+        workShift:
+          $ref: '#/definitions/workShiftRecord'
+        employer:
+          $ref: '#/definitions/companyRecord'
+        person:
+          $ref: '#/definitions/personRecord'
+        phoneContact:
+          type: array
+          items:
+            $ref: '#/definitions/phoneContactRecord'
+          description: 'Contato telefônico'
+        emails:
+          type: array
+          items:
+            $ref: '#/definitions/employeeEmailRecord'
+          description: 'Emails vinculado ao colaborador'
+        workstation:
+          $ref: '#/definitions/workstationRecord'
+        historicStability:
+          type: array
+          items:
+            $ref: '#/definitions/historicStabilityRecord'
+          description: 'Histórico de estabilidade'
+
+  genericError:
+    properties:
+      message:
+        type: string
+        description: Messaging describing the error.
+      reason:
+        type: string
+        description: A symbolic code identifying the category of the reason of the error.
+        enum:
+          - BAD_REQUEST
+          - UNAUTHORIZED
+          - PAYMENT_REQUIRED
+          - FORBIDDEN
+          - OBJECT_NOT_FOUND
+          - REQUEST_TIMEOUT
+          - GONE
+          - UNPROCESSABLE
+          - INTERNAL_ERROR
+          - NOT_IMPLEMENTED
+          - SERVICE_UNAVAILABLE
+          - INSUFFICIENT_STORAGE

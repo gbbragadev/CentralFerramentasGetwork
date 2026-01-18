@@ -31,6 +31,7 @@ model Product {
   code        String   @unique
   name        String
   description String?
+  module      DataSourceModule @default(PLATFORM_SIGN) @map("module")
   icon        String?
   isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at")
@@ -136,6 +137,14 @@ enum ChannelType {
   SMS
 }
 
+enum DataSourceModule {
+  HCM_GED
+  HCM_EMPLOYEEJOURNEY
+  PLATFORM_SIGN
+  PLATFORM_USER
+  PLATFORM_AUTHORIZATION
+}
+
 // --- Regras de notificação ---
 // --- Fonte de Dados (reutilizável) ---
 model DataSource {
@@ -153,11 +162,15 @@ model DataSource {
   // Mapeamento do response
   responseDataPath String? @map("response_data_path") // Ex: "contents", "items"
   responseMapping  Json?   @map("response_mapping")   // Campos a extrair
+  defaultMappings  Json?   @map("default_mappings")   // Caminhos padrÃ£o para templates
 
   // Status
   isActive    Boolean @default(true) @map("is_active")
   lastTestedAt DateTime? @map("last_tested_at")
   lastTestStatus String? @map("last_test_status")
+  lastTestResponse Json? @map("last_test_response")
+  lastTestExtractedData Json? @map("last_test_extracted_data")
+  lastTestPaths Json? @map("last_test_paths")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

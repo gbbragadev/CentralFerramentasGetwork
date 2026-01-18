@@ -122,6 +122,17 @@ Acesse: http://localhost:3000
 - `GET /tenants/:id/senior-credentials` - Credenciais Senior
 - `PUT /tenants/:id/senior-credentials` - Atualizar credenciais
 
+### **Fontes de Dados (Data Sources)**
+- Campo `module` define o mÃ³dulo Senior (ex.: PLATFORM_SIGN, HCM_GED) e aplica presets automÃ¡ticos.
+- `POST /datasources/test` - Testar query sem salvar (usa `tenantId` + config ou `dataSourceId`).
+- `POST /datasources/:id/test` - Testar query e salvar o Ãºltimo resultado/paths.
+- `GET /datasources/modules` - Lista mÃ³dulos e defaults.
+
+### **Templates WhatsApp**
+- Placeholders usam `{{path}}` com dot notation: `signers[].name`, `envelope.id`.
+- Arrays: `arr[]` indica todos os itens; `iterateOverField` envia item-a-item.
+- Filtros: expressÃ£o simples como `status == 'PENDING'` (sem `eval`).
+
 ### **Regras de Notificação**
 - `GET /rules` - Listar
 - `POST /rules` - Criar
@@ -206,6 +217,7 @@ docker-compose exec api npx prisma db seed
 
 - [Product Vision](./docs/product-vision.md) - Visão do produto
 - [Remote Access](./docs/remote-access.md) - Acesso remoto via ngrok
+- [Swagger Senior](./docs/senior/swagger) - YAMLs das APIs Senior X
 - [Frontend README](./frontend/README.md) - Documentação do frontend
 
 ## 🔐 Segurança

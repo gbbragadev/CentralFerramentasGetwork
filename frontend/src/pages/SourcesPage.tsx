@@ -5,19 +5,14 @@ import { Table } from '@/components/Table';
 import { Modal } from '@/components/Modal';
 import { Input } from '@/components/Input';
 import { apiClient } from '@/api/client';
-import { DataSource, DataSourcePreset, DataSourceTestResult, Tenant } from '@/api/types';
-import { Plus, Edit, Trash2, Database, AlertTriangle, Code, Play, CheckCircle, XCircle, Clock, Sparkles } from 'lucide-react';
+import { DataSource, DataSourceModule, DataSourceModulePreset, DataSourcePreset, DataSourceTestResult, DefaultMappings, Tenant } from '@/api/types';
+import { Plus, Edit, Trash2, Database, AlertTriangle, Code, Play, CheckCircle, XCircle, Clock, Sparkles, Copy } from 'lucide-react';
 import { toast } from 'sonner';
-
-const API_MODULE_OPTIONS = [
-  { value: 'sign', label: 'Sign (Assinaturas)' },
-  { value: 'ecm_ged', label: 'ECM/GED (Documentos)' },
-  { value: 'hcm', label: 'HCM (Recursos Humanos)' },
-];
 
 export function SourcesPage() {
   const [sources, setSources] = useState<DataSource[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [modules, setModules] = useState<DataSourceModulePreset[]>([]);
   const [presets, setPresets] = useState<DataSourcePreset[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -29,10 +24,13 @@ export function SourcesPage() {
   const [testResult, setTestResult] = useState<DataSourceTestResult | null>(null);
   const [testTenantId, setTestTenantId] = useState<string>('');
   const [testing, setTesting] = useState(false);
+  const [formTestResult, setFormTestResult] = useState<DataSourceTestResult | null>(null);
+  const [formTesting, setFormTesting] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    module: 'PLATFORM_SIGN' as DataSourceModule,
     apiModule: 'sign',
     apiMethod: 'POST' as 'GET' | 'POST',
     apiEndpoint: 'queries/listEnvelopes',
@@ -40,16 +38,27 @@ export function SourcesPage() {
     apiHeaders: '{}',
     responseDataPath: 'contents',
     responseMapping: '{}',
+    defaultMappings: {
+      employeeNamePath: '',
+      companyNamePath: '',
+      defaultRecipients: {
+        phonePath: 'signers[].phoneNumber',
+        namePath: 'signers[].name',
+        iterateOverPath: 'signers',
+        filterExpression: "status == 'PENDING'",
+      },
+    } as DefaultMappings,
     isActive: true,
   });
 
   const loadData = async () => {
     setLoading(true);
 
-    const [sourcesRes, tenantsRes, presetsRes] = await Promise.all([
+    const [sourcesRes, tenantsRes, presetsRes, modulesRes] = await Promise.all([
       apiClient.get<DataSource[]>('/datasources'),
       apiClient.get<Tenant[]>('/tenants?pageSize=100'),
       apiClient.get<DataSourcePreset[]>('/datasources/presets/list'),
+      apiClient.get<DataSourceModulePreset[]>('/datasources/modules'),
     ]);
 
     if (sourcesRes.data) setSources(sourcesRes.data);
@@ -61,6 +70,7 @@ export function SourcesPage() {
       }
     }
     if (presetsRes.data) setPresets(presetsRes.data);
+    if (modulesRes.data) setModules(modulesRes.data);
 
     setLoading(false);
   };
@@ -69,28 +79,85 @@ export function SourcesPage() {
     loadData();
   }, []);
 
+  const normalizeMappings = (mappings?: DefaultMappings | null): DefaultMappings => ({
+    employeeNamePath: mappings?.employeeNamePath || '',
+    companyNamePath: mappings?.companyNamePath || '',
+    defaultRecipients: {
+      phonePath: mappings?.defaultRecipients?.phonePath || '',
+      namePath: mappings?.defaultRecipients?.namePath || '',
+      iterateOverPath: mappings?.defaultRecipients?.iterateOverPath || '',
+      filterExpression: mappings?.defaultRecipients?.filterExpression || '',
+    },
+  });
+
+  const findModulePreset = (moduleId: DataSourceModule) =>
+    modules.find((module) => module.id === moduleId);
+
+  const applyModuleDefaults = (moduleId: DataSourceModule) => {
+    const preset = findModulePreset(moduleId);
+    if (!preset) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      module: moduleId,
+      name: preset.defaultDataSource.name,
+      description: preset.defaultDataSource.description || '',
+      apiModule: preset.apiModule,
+      apiMethod: preset.defaultDataSource.apiMethod,
+      apiEndpoint: preset.defaultDataSource.apiEndpoint,
+      apiParams: JSON.stringify(preset.defaultDataSource.apiParams ?? {}, null, 2),
+      responseDataPath: preset.defaultDataSource.responseDataPath || '',
+      defaultMappings: normalizeMappings(preset.defaultMappings),
+    }));
+    setFormTestResult(null);
+  };
+
   const handleCreate = () => {
     setSelectedSource(null);
-    setFormData({
-      name: '',
-      description: '',
-      apiModule: 'sign',
-      apiMethod: 'POST',
-      apiEndpoint: 'queries/listEnvelopes',
-      apiParams: '{\n  "status": ["PENDING"],\n  "offset": 0,\n  "limit": 50\n}',
-      apiHeaders: '{}',
-      responseDataPath: 'contents',
-      responseMapping: '{}',
-      isActive: true,
-    });
+    const defaultModule = modules[0]?.id || 'PLATFORM_SIGN';
+    const preset = findModulePreset(defaultModule as DataSourceModule);
+    if (preset) {
+      setFormData({
+        name: preset.defaultDataSource.name,
+        description: preset.defaultDataSource.description || '',
+        module: preset.id,
+        apiModule: preset.apiModule,
+        apiMethod: preset.defaultDataSource.apiMethod,
+        apiEndpoint: preset.defaultDataSource.apiEndpoint,
+        apiParams: JSON.stringify(preset.defaultDataSource.apiParams ?? {}, null, 2),
+        apiHeaders: '{}',
+        responseDataPath: preset.defaultDataSource.responseDataPath || '',
+        responseMapping: '{}',
+        defaultMappings: normalizeMappings(preset.defaultMappings),
+        isActive: true,
+      });
+    } else {
+      setFormData({
+        name: '',
+        description: '',
+        module: 'PLATFORM_SIGN',
+        apiModule: 'sign',
+        apiMethod: 'POST',
+        apiEndpoint: 'queries/listEnvelopes',
+        apiParams: '{\n  "status": ["PENDING"],\n  "offset": 0,\n  "limit": 50\n}',
+        apiHeaders: '{}',
+        responseDataPath: 'contents',
+        responseMapping: '{}',
+        defaultMappings: normalizeMappings(),
+        isActive: true,
+      });
+    }
+    setFormTestResult(null);
     setIsModalOpen(true);
   };
 
   const handleEdit = (source: DataSource) => {
     setSelectedSource(source);
+    const preset = findModulePreset(source.module);
     setFormData({
       name: source.name,
       description: source.description || '',
+      module: source.module,
       apiModule: source.apiModule,
       apiMethod: source.apiMethod,
       apiEndpoint: source.apiEndpoint,
@@ -98,8 +165,10 @@ export function SourcesPage() {
       apiHeaders: source.apiHeaders ? JSON.stringify(source.apiHeaders, null, 2) : '{}',
       responseDataPath: source.responseDataPath || '',
       responseMapping: source.responseMapping ? JSON.stringify(source.responseMapping, null, 2) : '{}',
+      defaultMappings: normalizeMappings(source.defaultMappings || preset?.defaultMappings),
       isActive: source.isActive,
     });
+    setFormTestResult(null);
     setIsModalOpen(true);
   };
 
@@ -196,9 +265,24 @@ export function SourcesPage() {
     }
 
     setSubmitting(true);
+    const mappingPhonePath = formData.defaultMappings.defaultRecipients.phonePath.trim();
+    const defaultMappings = mappingPhonePath
+      ? {
+          employeeNamePath: formData.defaultMappings.employeeNamePath?.trim() || null,
+          companyNamePath: formData.defaultMappings.companyNamePath?.trim() || null,
+          defaultRecipients: {
+            phonePath: mappingPhonePath,
+            namePath: formData.defaultMappings.defaultRecipients.namePath?.trim() || null,
+            iterateOverPath: formData.defaultMappings.defaultRecipients.iterateOverPath?.trim() || null,
+            filterExpression: formData.defaultMappings.defaultRecipients.filterExpression?.trim() || null,
+          },
+        }
+      : undefined;
+
     const payload = {
       name: formData.name,
       description: formData.description || undefined,
+      module: formData.module,
       apiModule: formData.apiModule,
       apiMethod: formData.apiMethod,
       apiEndpoint: formData.apiEndpoint,
@@ -206,6 +290,7 @@ export function SourcesPage() {
       apiHeaders: Object.keys(apiHeaders).length > 0 ? apiHeaders : undefined,
       responseDataPath: formData.responseDataPath || undefined,
       responseMapping: Object.keys(responseMapping).length > 0 ? responseMapping : undefined,
+      defaultMappings,
       isActive: formData.isActive,
     };
 
@@ -227,6 +312,7 @@ export function SourcesPage() {
     setFormData({
       name: preset.name,
       description: preset.description,
+      module: preset.module,
       apiModule: preset.apiModule,
       apiMethod: preset.apiMethod as 'GET' | 'POST',
       apiEndpoint: preset.apiEndpoint,
@@ -234,11 +320,154 @@ export function SourcesPage() {
       apiHeaders: '{}',
       responseDataPath: preset.responseDataPath,
       responseMapping: '{}',
+      defaultMappings: normalizeMappings(preset.defaultMappings),
       isActive: true,
     });
+    setFormTestResult(null);
     setIsPresetsModalOpen(false);
     setIsModalOpen(true);
   };
+
+  const handleCopyPath = async (path: string) => {
+    try {
+      await navigator.clipboard.writeText(path);
+      toast.success('Path copiado');
+    } catch {
+      toast.error('NÃ£o foi possÃ­vel copiar o path');
+    }
+  };
+
+  const handleFormTest = async () => {
+    if (!testTenantId) {
+      toast.error('Selecione um tenant para testar');
+      return;
+    }
+
+    let apiParams = {};
+    let apiHeaders = {};
+
+    try {
+      apiParams = JSON.parse(formData.apiParams);
+    } catch {
+      toast.error('Parâmetros da API devem ser um JSON válido');
+      return;
+    }
+
+    try {
+      apiHeaders = JSON.parse(formData.apiHeaders);
+    } catch {
+      toast.error('Headers da API devem ser um JSON válido');
+      return;
+    }
+
+    setFormTesting(true);
+    setFormTestResult(null);
+
+    const response = await apiClient.post<DataSourceTestResult>('/datasources/test', {
+      tenantId: testTenantId,
+      dataSourceId: selectedSource?.id,
+      dataSource: {
+        apiModule: formData.apiModule,
+        apiMethod: formData.apiMethod,
+        apiEndpoint: formData.apiEndpoint,
+        apiParams,
+        apiHeaders,
+        responseDataPath: formData.responseDataPath || undefined,
+      },
+    });
+
+    setFormTesting(false);
+
+    if (response.error) {
+      toast.error(response.error.message);
+    } else if (response.data) {
+      setFormTestResult(response.data);
+      if (response.data.success) {
+        toast.success(`Query executada em ${response.data.duration}ms`);
+      } else {
+        toast.error(`Erro HTTP ${response.data.httpStatus}`);
+      }
+    }
+  };
+
+  const renderTestResult = (result: DataSourceTestResult) => (
+    <div className="space-y-4">
+      <div className={`rounded-lg p-4 ${result.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {result.success ? (
+              <CheckCircle className="h-5 w-5 text-green-600" />
+            ) : (
+              <XCircle className="h-5 w-5 text-red-600" />
+            )}
+            <span className={`font-medium ${result.success ? 'text-green-700' : 'text-red-700'}`}>
+              HTTP {result.httpStatus}
+            </span>
+          </div>
+          <div className="flex items-center gap-4 text-sm text-slate-600">
+            <span>{result.duration}ms</span>
+            {result.recordCount !== null && (
+              <span className="font-medium">{result.recordCount} registros</span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h4 className="text-sm font-medium text-slate-700 mb-2">RequisiÃ§Ã£o</h4>
+        <div className="bg-slate-900 rounded-lg p-3 text-sm">
+          <div className="text-green-400 font-mono">
+            {result.method} {result.url}
+          </div>
+          {Object.keys(result.requestBody).length > 0 && (
+            <pre className="text-slate-300 mt-2 text-xs overflow-x-auto">
+              {JSON.stringify(result.requestBody, null, 2)}
+            </pre>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <h4 className="text-sm font-medium text-slate-700 mb-2">Resposta</h4>
+        <div className="bg-slate-900 rounded-lg p-3">
+          <pre className="text-slate-300 text-xs overflow-x-auto max-h-64">
+            {JSON.stringify(result.response, null, 2)}
+          </pre>
+        </div>
+      </div>
+
+      {result.extractedData && (
+        <div>
+          <h4 className="text-sm font-medium text-slate-700 mb-2">Dados ExtraÃ­dos</h4>
+          <div className="bg-slate-900 rounded-lg p-3">
+            <pre className="text-slate-300 text-xs overflow-x-auto max-h-64">
+              {JSON.stringify(result.extractedData, null, 2)}
+            </pre>
+          </div>
+        </div>
+      )}
+
+      {result.detectedPaths && result.detectedPaths.length > 0 && (
+        <div>
+          <h4 className="text-sm font-medium text-slate-700 mb-2">Paths detectados</h4>
+          <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+            {result.detectedPaths.map((path) => (
+              <button
+                key={path}
+                type="button"
+                onClick={() => handleCopyPath(path)}
+                className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-slate-100 text-slate-700 text-xs hover:bg-slate-200"
+                title="Clique para copiar"
+              >
+                <Copy className="h-3 w-3" />
+                {path}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   const getStatusBadge = (source: DataSource) => {
     if (!source.lastTestedAt) {
@@ -284,7 +513,7 @@ export function SourcesPage() {
       header: 'Módulo',
       accessor: (row: DataSource) => (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-          {row.apiModule}
+          {modules.find((module) => module.id === row.module)?.label || row.module}
         </span>
       ),
     },
@@ -421,7 +650,7 @@ export function SourcesPage() {
                     <div className="text-sm text-slate-500 mt-0.5">{preset.description}</div>
                     <div className="flex items-center gap-2 mt-2">
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
-                        {preset.apiModule}
+                        {modules.find((module) => module.id === preset.module)?.label || preset.module}
                       </span>
                       <code className="text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-600">
                         {preset.apiEndpoint}
@@ -470,17 +699,25 @@ export function SourcesPage() {
                   Módulo
                 </label>
                 <select
-                  value={formData.apiModule}
-                  onChange={(e) => setFormData({ ...formData, apiModule: e.target.value })}
+                  value={formData.module}
+                  onChange={(e) => applyModuleDefaults(e.target.value as DataSourceModule)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                 >
-                  {API_MODULE_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
+                  {modules.map((module) => (
+                    <option key={module.id} value={module.id}>
+                      {module.label}
                     </option>
                   ))}
                 </select>
               </div>
+
+              <Input
+                label="API Module"
+                value={formData.apiModule}
+                onChange={(e) => setFormData({ ...formData, apiModule: e.target.value })}
+                placeholder="sign"
+                hint="Segmento da API Senior (ex: sign, ecm_ged)"
+              />
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">
@@ -495,15 +732,15 @@ export function SourcesPage() {
                   <option value="GET">GET</option>
                 </select>
               </div>
-
-              <Input
-                label="Caminho dos Dados"
-                value={formData.responseDataPath}
-                onChange={(e) => setFormData({ ...formData, responseDataPath: e.target.value })}
-                placeholder="contents"
-                hint="Campo na resposta com os dados"
-              />
             </div>
+
+            <Input
+              label="Caminho dos Dados"
+              value={formData.responseDataPath}
+              onChange={(e) => setFormData({ ...formData, responseDataPath: e.target.value })}
+              placeholder="contents"
+              hint="Campo na resposta com os dados"
+            />
 
             <Input
               label="Endpoint *"
@@ -539,6 +776,150 @@ export function SourcesPage() {
                 placeholder='{}'
               />
             </div>
+          </div>
+
+          <div className="bg-slate-50 rounded-lg p-4 space-y-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <Database className="h-4 w-4" />
+              Mapeamentos padrÃ£o
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Caminho do Nome do Colaborador"
+                value={formData.defaultMappings.employeeNamePath || ''}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    defaultMappings: {
+                      ...formData.defaultMappings,
+                      employeeNamePath: e.target.value,
+                    },
+                  })
+                }
+                placeholder="signers[].name"
+                hint="Opcional, para uso em templates"
+              />
+              <Input
+                label="Caminho do Nome da Empresa"
+                value={formData.defaultMappings.companyNamePath || ''}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    defaultMappings: {
+                      ...formData.defaultMappings,
+                      companyNamePath: e.target.value,
+                    },
+                  })
+                }
+                placeholder="company.name"
+                hint="Opcional, para uso em templates"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Telefone padrÃ£o"
+                value={formData.defaultMappings.defaultRecipients.phonePath || ''}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    defaultMappings: {
+                      ...formData.defaultMappings,
+                      defaultRecipients: {
+                        ...formData.defaultMappings.defaultRecipients,
+                        phonePath: e.target.value,
+                      },
+                    },
+                  })
+                }
+                placeholder="signers[].phoneNumber"
+              />
+              <Input
+                label="Nome padrÃ£o (opcional)"
+                value={formData.defaultMappings.defaultRecipients.namePath || ''}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    defaultMappings: {
+                      ...formData.defaultMappings,
+                      defaultRecipients: {
+                        ...formData.defaultMappings.defaultRecipients,
+                        namePath: e.target.value,
+                      },
+                    },
+                  })
+                }
+                placeholder="signers[].name"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Iterar sobre"
+                value={formData.defaultMappings.defaultRecipients.iterateOverPath || ''}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    defaultMappings: {
+                      ...formData.defaultMappings,
+                      defaultRecipients: {
+                        ...formData.defaultMappings.defaultRecipients,
+                        iterateOverPath: e.target.value,
+                      },
+                    },
+                  })
+                }
+                placeholder="signers"
+                hint="Se a resposta for lista, informe o caminho"
+              />
+              <Input
+                label="Filtro padrÃ£o (opcional)"
+                value={formData.defaultMappings.defaultRecipients.filterExpression || ''}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    defaultMappings: {
+                      ...formData.defaultMappings,
+                      defaultRecipients: {
+                        ...formData.defaultMappings.defaultRecipients,
+                        filterExpression: e.target.value,
+                      },
+                    },
+                  })
+                }
+                placeholder="status == 'PENDING'"
+                hint="ExpressÃ£o simples para filtrar itens"
+              />
+            </div>
+          </div>
+
+          <div className="bg-slate-50 rounded-lg p-4 space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Testar query com tenant
+                </label>
+                <select
+                  value={testTenantId}
+                  onChange={(e) => setTestTenantId(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                >
+                  <option value="">Selecione um tenant...</option>
+                  {tenants.map((tenant) => (
+                    <option key={tenant.id} value={tenant.id}>
+                      {tenant.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Button type="button" onClick={handleFormTest} loading={formTesting} disabled={!testTenantId}>
+                <Play className="h-4 w-4 mr-2" />
+                Testar Query
+              </Button>
+            </div>
+
+            {formTestResult && renderTestResult(formTestResult)}
           </div>
 
           <div className="flex items-center gap-2">
@@ -602,70 +983,7 @@ export function SourcesPage() {
             </div>
           </div>
 
-          {testResult && (
-            <div className="space-y-4">
-              {/* Status */}
-              <div className={`rounded-lg p-4 ${testResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {testResult.success ? (
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                    ) : (
-                      <XCircle className="h-5 w-5 text-red-600" />
-                    )}
-                    <span className={`font-medium ${testResult.success ? 'text-green-700' : 'text-red-700'}`}>
-                      HTTP {testResult.httpStatus}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-slate-600">
-                    <span>{testResult.duration}ms</span>
-                    {testResult.recordCount !== null && (
-                      <span className="font-medium">{testResult.recordCount} registros</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Request Info */}
-              <div>
-                <h4 className="text-sm font-medium text-slate-700 mb-2">Requisição</h4>
-                <div className="bg-slate-900 rounded-lg p-3 text-sm">
-                  <div className="text-green-400 font-mono">
-                    {testResult.method} {testResult.url}
-                  </div>
-                  {Object.keys(testResult.requestBody).length > 0 && (
-                    <pre className="text-slate-300 mt-2 text-xs overflow-x-auto">
-                      {JSON.stringify(testResult.requestBody, null, 2)}
-                    </pre>
-                  )}
-                </div>
-              </div>
-
-              {/* Response */}
-              <div>
-                <h4 className="text-sm font-medium text-slate-700 mb-2">Resposta</h4>
-                <div className="bg-slate-900 rounded-lg p-3">
-                  <pre className="text-slate-300 text-xs overflow-x-auto max-h-64">
-                    {JSON.stringify(testResult.response, null, 2)}
-                  </pre>
-                </div>
-              </div>
-
-              {/* Extracted Data */}
-              {testResult.extractedData && (
-                <div>
-                  <h4 className="text-sm font-medium text-slate-700 mb-2">
-                    Dados Extraídos ({selectedSource?.responseDataPath || 'root'})
-                  </h4>
-                  <div className="bg-slate-900 rounded-lg p-3">
-                    <pre className="text-slate-300 text-xs overflow-x-auto max-h-64">
-                      {JSON.stringify(testResult.extractedData, null, 2)}
-                    </pre>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+          {testResult && renderTestResult(testResult)}
         </div>
       </Modal>
 
