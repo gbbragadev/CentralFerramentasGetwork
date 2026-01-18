@@ -29,14 +29,14 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 flex">
-      {/* Left Panel - Branding (fundo escuro = logo azul/dark) */}
+      {/* Left Panel - Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-slate-950 items-center justify-center p-12">
         <div className="max-w-md text-white space-y-8">
-          {/* Logo azul para fundo escuro */}
-          <img 
-            src="/logo-dark.png" 
-            alt="Forbiz & GetWork" 
-            className="h-24 w-auto object-contain"
+          <img
+            src="/brand-logo-light.svg"
+            alt="GetWork"
+            className="h-16 w-auto"
+            onError={(e) => { e.currentTarget.src = '/logo-dark.png'; }}
           />
           
           <h2 className="text-2xl font-semibold mb-4">
@@ -80,12 +80,13 @@ export function LoginPage() {
       {/* Right Panel - Login Form (fundo claro = logo light) */}
       <div className="flex-1 flex items-center justify-center p-8 bg-slate-100">
         <div className="w-full max-w-md">
-          {/* Mobile Logo - fundo claro */}
+          {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center mb-8">
-            <img 
-              src="/logo-light.png" 
-              alt="Forbiz & GetWork" 
-              className="h-16 w-auto object-contain"
+            <img
+              src="/brand-logo-blue.svg"
+              alt="GetWork"
+              className="h-12 w-auto"
+              onError={(e) => { e.currentTarget.src = '/logo-light.png'; }}
             />
           </div>
 

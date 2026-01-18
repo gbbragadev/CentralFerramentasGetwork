@@ -41,10 +41,13 @@ export function Sidebar() {
     <aside className="w-64 bg-slate-900 text-white flex flex-col h-screen fixed left-0 top-0">
       {/* Logo */}
       <div className="px-6 py-5 border-b border-slate-800">
-        <img 
-          src="/logo-light.png" 
-          alt="Forbiz & GetWork" 
-          className="h-14 w-auto mx-auto object-contain"
+        <img
+          src="/brand-logo-light.svg"
+          alt="GetWork"
+          className="h-10 w-auto mx-auto"
+          onError={(e) => {
+            e.currentTarget.src = '/logo-dark.png';
+          }}
         />
       </div>
 
