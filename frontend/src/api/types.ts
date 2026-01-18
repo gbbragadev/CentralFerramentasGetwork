@@ -56,6 +56,7 @@ export interface Tenant {
   seniorCredentials?: {
     id: string;
     baseUrl: string;
+    demoMode: boolean;
   } | null;
   _count?: {
     rules: number;

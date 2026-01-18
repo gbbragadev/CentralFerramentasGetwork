@@ -157,6 +157,7 @@ export interface Company {
 export interface SeniorCredentialsConfig {
   baseUrl: string;
   authToken: string;
+  demoMode: boolean;
   // Campos opcionais para Client ID/Secret (APIs privadas)
   clientId?: string;
   clientSecret?: string;
