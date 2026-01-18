@@ -1,5 +1,17 @@
 # Dependencies
 node_modules/
+
+# Binary assets (avoid committing generated binaries)
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.ico
+*.pdf
+*.zip
+*.db
+*.woff
+*.woff2
 .pnp
 .pnp.js
 

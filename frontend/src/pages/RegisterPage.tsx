@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
+import { BrandMark } from '@/components/BrandMark';
 import { apiClient } from '@/api/client';
 import { Mail, Lock, User, ArrowLeft, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -58,9 +59,9 @@ export function RegisterPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 text-center">
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200/70 p-8 text-center">
             <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
@@ -78,17 +79,11 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex">
+    <div className="min-h-screen bg-slate-950 flex">
       {/* Left side - Branding */}
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-center items-center p-12 text-white">
-        <div className="max-w-md">
-          <div className="mb-8">
-            <img 
-              src="/logo-combined.png" 
-              alt="Forbiz & GetWork" 
-              className="h-14 w-auto"
-            />
-          </div>
+        <div className="max-w-md space-y-8">
+          <BrandMark variant="light" size="lg" />
           
           <h2 className="text-4xl font-bold mb-4">
             Crie sua conta
@@ -100,20 +95,20 @@ export function RegisterPage() {
           
           <div className="space-y-4">
             <div className="flex items-center gap-3 text-slate-300">
-              <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
-                <CheckCircle className="h-4 w-4 text-primary" />
+              <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center">
+                <CheckCircle className="h-4 w-4 text-white" />
               </div>
               <span>Notificações WhatsApp automatizadas</span>
             </div>
             <div className="flex items-center gap-3 text-slate-300">
-              <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
-                <CheckCircle className="h-4 w-4 text-primary" />
+              <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center">
+                <CheckCircle className="h-4 w-4 text-white" />
               </div>
               <span>Integração com GED e Sign</span>
             </div>
             <div className="flex items-center gap-3 text-slate-300">
-              <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
-                <CheckCircle className="h-4 w-4 text-primary" />
+              <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center">
+                <CheckCircle className="h-4 w-4 text-white" />
               </div>
               <span>Extensão para Cercas Virtuais</span>
             </div>
@@ -122,16 +117,12 @@ export function RegisterPage() {
       </div>
 
       {/* Right side - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-4 lg:p-12">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-4 lg:p-12 bg-slate-100">
         <div className="w-full max-w-md">
-          <div className="bg-white rounded-2xl shadow-2xl p-8">
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200/70 p-8">
             {/* Mobile branding */}
             <div className="lg:hidden flex items-center justify-center mb-6">
-              <img 
-                src="/logo-combined.png" 
-                alt="Forbiz & GetWork" 
-                className="h-10 w-auto"
-              />
+              <BrandMark variant="dark" size="md" />
             </div>
 
             <div className="mb-6">
