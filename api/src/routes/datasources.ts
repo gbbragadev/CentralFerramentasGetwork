@@ -25,8 +25,9 @@ const testQuerySchema = z.object({
 });
 
 // Constrói a URL completa da API Senior
+// Formato: https://platform.senior.com.br/t/senior.com.br/bridge/1.0/rest/platform/{module}/{endpoint}
 function buildSeniorUrl(apiModule: string, apiEndpoint: string): string {
-  const baseUrl = 'https://platform.senior.com.br/t/senior.com.br/bridge/1.0/rest';
+  const baseUrl = 'https://platform.senior.com.br/t/senior.com.br/bridge/1.0/rest/platform';
   // Remove barra inicial se houver
   const endpoint = apiEndpoint.startsWith('/') ? apiEndpoint.slice(1) : apiEndpoint;
   // Se já contém o módulo, usa direto
