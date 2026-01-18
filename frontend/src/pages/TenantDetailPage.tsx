@@ -56,7 +56,6 @@ export function TenantDetailPage() {
     password: '',
     environment: 'production' as 'production' | 'sandbox',
     baseUrl: 'https://platform.senior.com.br',
-    demoMode: false,
   });
   
   const [whatsappForm, setWhatsappForm] = useState({
@@ -99,7 +98,6 @@ export function TenantDetailPage() {
         password: '', // Não retorna por segurança
         environment: seniorRes.data.environment || 'production',
         baseUrl: seniorRes.data.baseUrl || 'https://platform.senior.com.br',
-        demoMode: seniorRes.data.demoMode ?? false,
       });
     }
     
@@ -152,8 +150,8 @@ export function TenantDetailPage() {
       toast.error('Usuário é obrigatório');
       return;
     }
-    // Senha só é obrigatória se não existir credenciais e não estiver em demo
-    if (!seniorForm.demoMode && !seniorCredentials && !seniorForm.password.trim()) {
+    // Senha só é obrigatória se não existir credenciais
+    if (!seniorCredentials && !seniorForm.password.trim()) {
       toast.error('Senha é obrigatória');
       return;
     }
@@ -188,8 +186,8 @@ export function TenantDetailPage() {
       toast.error('Informe o Usuário');
       return;
     }
-    // Para testar login real, sempre exigir senha (exceto demo)
-    if (!seniorForm.demoMode && !seniorForm.password.trim()) {
+    // Para testar login real, sempre exigir senha
+    if (!seniorForm.password.trim()) {
       toast.error('Informe a Senha');
       return;
     }
@@ -206,7 +204,6 @@ export function TenantDetailPage() {
         password: seniorForm.password || undefined, // Usa senha do form ou a já salva
         environment: seniorForm.environment,
         baseUrl: seniorForm.baseUrl,
-        demoMode: seniorForm.demoMode,
       }
     );
     setTesting(false);
@@ -496,24 +493,6 @@ export function TenantDetailPage() {
                   onChange={(e) => setSeniorForm({ ...seniorForm, baseUrl: e.target.value })}
                   placeholder="https://platform.senior.com.br"
                 />
-              </div>
-
-              <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <input
-                  type="checkbox"
-                  id="seniorDemoMode"
-                  className="mt-1 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
-                  checked={seniorForm.demoMode}
-                  onChange={(e) => setSeniorForm({ ...seniorForm, demoMode: e.target.checked })}
-                />
-                <div>
-                  <label htmlFor="seniorDemoMode" className="text-sm font-medium text-slate-700">
-                    Usar modo demo (não valida login real)
-                  </label>
-                  <p className="text-xs text-slate-500">
-                    Quando ativado, o sistema usa um token de demonstração e ignora a autenticação real.
-                  </p>
-                </div>
               </div>
 
               {/* Resultado do Teste */}

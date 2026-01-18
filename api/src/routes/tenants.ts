@@ -37,24 +37,14 @@ const credentialsSchema = z.object({
   username: z.string().min(1, 'Usuário obrigatório'),
   password: z.string().min(1).optional(),
   environment: z.enum(['production', 'sandbox']).default('production'),
-  demoMode: z.boolean().default(false),
-}).refine((data) => {
-  return Boolean(data.demoMode || data.authToken || data.password);
-}, {
-  message: 'Informe authToken ou senha, ou ative o modo demo',
 });
 
 const testConnectionSchema = z.object({
   baseUrl: z.string().url('URL inválida'),
   seniorTenant: z.string().min(1, 'Tenant Senior obrigatório'),
   username: z.string().min(1, 'Usuário obrigatório'),
-  password: z.string().min(1, 'Senha obrigatória').optional(),
-  demoMode: z.boolean().default(false),
+  password: z.string().min(1, 'Senha obrigatória'),
   environment: z.enum(['production', 'sandbox']).default('production'),
-}).refine((data) => {
-  return Boolean(data.demoMode || data.password);
-}, {
-  message: 'Informe a senha ou ative o modo demo',
 });
 
 const normalizeAuthToken = (token: string) => (
@@ -126,7 +116,6 @@ export async function tenantsRoutes(app: FastifyInstance) {
           select: {
             id: true,
             baseUrl: true,
-            demoMode: true,
           },
         },
         _count: {
@@ -154,7 +143,6 @@ export async function tenantsRoutes(app: FastifyInstance) {
           select: {
             id: true,
             baseUrl: true,
-            demoMode: true,
           },
         },
         notificationChannels: true,
@@ -274,7 +262,6 @@ export async function tenantsRoutes(app: FastifyInstance) {
       lastAuthAt: credentials.lastAuthAt,
       lastAuthError: credentials.lastAuthError,
       tokenExpiresAt: credentials.tokenExpiresAt,
-      demoMode: credentials.demoMode,
       authToken: credentials.authToken.substring(0, 20) + '***',
       createdAt: credentials.createdAt,
       updatedAt: credentials.updatedAt,
@@ -299,11 +286,11 @@ export async function tenantsRoutes(app: FastifyInstance) {
     let tokenExpiresAt: Date | null = null;
     let lastAuthAt: Date | null = null;
     let lastAuthError: string | null = null;
+    const existingCredentials = await prisma.seniorCredentials.findUnique({
+      where: { tenantId: id },
+    });
 
-    if (body.demoMode) {
-      authToken = authToken ? normalizeAuthToken(authToken) : 'Bearer DEMO_TOKEN';
-      lastAuthAt = new Date();
-    } else if (!authToken && body.username && body.password) {
+    if (!authToken && body.username && body.password) {
       const authResult = await authenticateSenior(baseUrl, body.seniorTenant, body.username, body.password);
 
       if (!authResult.success) {
@@ -318,6 +305,14 @@ export async function tenantsRoutes(app: FastifyInstance) {
       lastAuthAt = new Date();
     } else if (authToken) {
       authToken = normalizeAuthToken(authToken);
+      tokenExpiresAt = existingCredentials?.tokenExpiresAt ?? null;
+      lastAuthAt = existingCredentials?.lastAuthAt ?? null;
+      lastAuthError = existingCredentials?.lastAuthError ?? null;
+    } else if (existingCredentials?.authToken) {
+      authToken = existingCredentials.authToken;
+      tokenExpiresAt = existingCredentials.tokenExpiresAt;
+      lastAuthAt = existingCredentials.lastAuthAt;
+      lastAuthError = existingCredentials.lastAuthError;
     }
 
     if (!authToken) {
@@ -335,7 +330,6 @@ export async function tenantsRoutes(app: FastifyInstance) {
         environment,
         baseUrl,
         authToken,
-        demoMode: body.demoMode,
         isActive: true,
         lastAuthAt,
         lastAuthError,
@@ -348,7 +342,6 @@ export async function tenantsRoutes(app: FastifyInstance) {
         environment,
         baseUrl,
         authToken,
-        demoMode: body.demoMode,
         lastAuthAt,
         lastAuthError,
         tokenExpiresAt,
@@ -365,7 +358,6 @@ export async function tenantsRoutes(app: FastifyInstance) {
       isActive: credentials.isActive,
       lastAuthAt: credentials.lastAuthAt,
       lastAuthError: credentials.lastAuthError,
-      demoMode: credentials.demoMode,
       authToken: credentials.authToken.substring(0, 20) + '***',
       tokenExpiresAt: credentials.tokenExpiresAt ?? tokenExpiresAt,
     });
@@ -379,15 +371,6 @@ export async function tenantsRoutes(app: FastifyInstance) {
     const tenant = await prisma.tenant.findUnique({ where: { id } });
     if (!tenant) {
       return send404(reply, 'Tenant');
-    }
-
-    if (body.demoMode) {
-      return success({
-        success: true,
-        message: 'Token recebido com sucesso (modo demo)',
-        tokenPreview: 'Bearer DEMO_TOKEN',
-        tokenExpiresAt: null,
-      });
     }
 
     const authResult = await authenticateSenior(body.baseUrl, body.seniorTenant, body.username, body.password);
