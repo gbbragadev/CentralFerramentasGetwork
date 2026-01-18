@@ -151,12 +151,12 @@ export function TenantsPage() {
       accessor: (row: Tenant) => (
         <span
           className={`inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full ${
-            row.isActive 
+            (row.active ?? row.isActive) 
               ? 'bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20' 
               : 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/20'
           }`}
         >
-          {row.isActive ? 'Ativo' : 'Inativo'}
+          {(row.active ?? row.isActive) ? 'Ativo' : 'Inativo'}
         </span>
       ),
     },
