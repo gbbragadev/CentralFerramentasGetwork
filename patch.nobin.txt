@@ -1,0 +1,1053 @@
+diff --git a/api/src/routes/auth.ts b/api/src/routes/auth.ts
+index e987eb93809a121567d9fee4552776685bfeaf6c..a277d448078b798cc9954adeb7113ac67bfed3f1 100644
+--- a/api/src/routes/auth.ts
++++ b/api/src/routes/auth.ts
+@@ -1,41 +1,81 @@
+ // ============================================================
+ // Auth Routes
+ // ============================================================
+ 
+ import { FastifyInstance } from 'fastify';
+ import { z } from 'zod';
+ import bcrypt from 'bcryptjs';
+ import { prisma } from '../index.js';
+ import { success, invalidCredentials, send401, send404, ErrorCodes, apiError } from '../lib/response.js';
+ 
+ const loginSchema = z.object({
+   email: z.string().email('Email inválido'),
+   password: z.string().min(1, 'Senha obrigatória'),
+ });
+ 
++const registerSchema = z.object({
++  name: z.string().min(2, 'Nome obrigatório'),
++  email: z.string().email('Email inválido'),
++  password: z.string().min(8, 'A senha deve ter pelo menos 8 caracteres'),
++});
++
+ export async function authRoutes(app: FastifyInstance) {
++  // POST /auth/register
++  app.post('/register', async (request, reply) => {
++    const body = registerSchema.parse(request.body);
++
++    const normalizedEmail = body.email.toLowerCase();
++    const existingUser = await prisma.user.findUnique({
++      where: { email: normalizedEmail },
++    });
++
++    if (existingUser) {
++      return reply.status(409).send(apiError(ErrorCodes.ALREADY_EXISTS, 'Email já cadastrado'));
++    }
++
++    const hashedPassword = await bcrypt.hash(body.password, 10);
++    const user = await prisma.user.create({
++      data: {
++        name: body.name,
++        email: normalizedEmail,
++        password: hashedPassword,
++      },
++    });
++
++    return reply.status(201).send(
++      success({
++        id: user.id,
++        email: user.email,
++        name: user.name,
++        role: user.role,
++        active: user.active,
++        createdAt: user.createdAt,
++      })
++    );
++  });
++
+   // POST /auth/login
+   app.post('/login', async (request, reply) => {
+     const body = loginSchema.parse(request.body);
+ 
+     const user = await prisma.user.findUnique({
+       where: { email: body.email },
+     });
+ 
+     if (!user || !user.active) {
+       return reply.status(401).send(invalidCredentials());
+     }
+ 
+     const validPassword = await bcrypt.compare(body.password, user.password);
+     if (!validPassword) {
+       return reply.status(401).send(invalidCredentials());
+     }
+ 
+     const token = app.jwt.sign(
+       {
+         userId: user.id,
+         email: user.email,
+         role: user.role,
+       },
+       { expiresIn: '24h' }
+     );
+diff --git a/api/src/routes/products.ts b/api/src/routes/products.ts
+index 11494feb1e4caabdbf1fe9f0ff52ac8ad9acc198..8383a44a9af4e4fe2fc2fd41cf96210c077fa1f1 100644
+--- a/api/src/routes/products.ts
++++ b/api/src/routes/products.ts
+@@ -1,43 +1,114 @@
+-// ============================================================
+-// Products Routes (Placeholder)
+-// ============================================================
+-// Este endpoint é um placeholder para a funcionalidade de produtos
+-// que será implementada futuramente.
+-
+ import { FastifyInstance } from 'fastify';
+-import { success } from '../lib/response.js';
++import { z } from 'zod';
++import { prisma } from '../index.js';
++import { success, send404, apiError, ErrorCodes } from '../lib/response.js';
++
++const productCreateSchema = z.object({
++  code: z
++    .string()
++    .min(2, 'Código obrigatório')
++    .regex(/^[A-Z][A-Z0-9_]*$/, 'Código inválido'),
++  name: z.string().min(2, 'Nome obrigatório'),
++  description: z.string().optional(),
++  icon: z.string().optional(),
++  isActive: z.boolean().optional().default(true),
++});
++
++const productUpdateSchema = productCreateSchema
++  .omit({ code: true })
++  .partial();
+ 
+ export async function productsRoutes(app: FastifyInstance) {
+   // Middleware de autenticação
+   app.addHook('preHandler', app.authenticate as any);
+ 
+   // GET /products - Listar todos os produtos
+   app.get('/', async () => {
+-    // TODO: Implementar quando a tabela de produtos existir
+-    return success([]);
++    const products = await prisma.product.findMany({
++      orderBy: { createdAt: 'desc' },
++    });
++    return success(products);
+   });
+ 
+   // GET /products/:id - Buscar produto por ID
+   app.get('/:id', async (request, reply) => {
+     const { id } = request.params as { id: string };
+     
+-    // TODO: Implementar quando a tabela de produtos existir
+-    return reply.status(404).send({
+-      error: {
+-        code: 'NOT_FOUND',
+-        message: 'Produto não encontrado',
+-      },
++    const product = await prisma.product.findUnique({
++      where: { id },
+     });
++
++    if (!product) {
++      return send404(reply, 'Produto');
++    }
++
++    return success(product);
+   });
+ 
+   // POST /products - Criar produto
+   app.post('/', async (request, reply) => {
+-    // TODO: Implementar quando a tabela de produtos existir
+-    return reply.status(501).send({
+-      error: {
+-        code: 'NOT_IMPLEMENTED',
+-        message: 'Funcionalidade de produtos ainda não implementada',
++    const body = productCreateSchema.parse(request.body);
++
++    const existingProduct = await prisma.product.findUnique({
++      where: { code: body.code },
++    });
++
++    if (existingProduct) {
++      return reply.status(409).send(apiError(ErrorCodes.CONFLICT, 'Código já cadastrado'));
++    }
++
++    const product = await prisma.product.create({
++      data: {
++        code: body.code,
++        name: body.name,
++        description: body.description?.trim() || null,
++        icon: body.icon?.trim() || null,
++        isActive: body.isActive ?? true,
+       },
+     });
++
++    return reply.status(201).send(success(product));
++  });
++
++  // PUT /products/:id - Atualizar produto
++  app.put('/:id', async (request, reply) => {
++    const { id } = request.params as { id: string };
++    const body = productUpdateSchema.parse(request.body);
++
++    const existingProduct = await prisma.product.findUnique({
++      where: { id },
++    });
++
++    if (!existingProduct) {
++      return send404(reply, 'Produto');
++    }
++
++    const product = await prisma.product.update({
++      where: { id },
++      data: {
++        name: body.name ?? existingProduct.name,
++        description: body.description?.trim() ?? existingProduct.description,
++        icon: body.icon?.trim() ?? existingProduct.icon,
++        isActive: body.isActive ?? existingProduct.isActive,
++      },
++    });
++
++    return success(product);
++  });
++
++  // DELETE /products/:id - Remover produto
++  app.delete('/:id', async (request, reply) => {
++    const { id } = request.params as { id: string };
++
++    const existingProduct = await prisma.product.findUnique({
++      where: { id },
++    });
++
++    if (!existingProduct) {
++      return send404(reply, 'Produto');
++    }
++
++    await prisma.product.delete({ where: { id } });
++    return reply.status(204).send();
+   });
+ }
+
+
+diff --git a/frontend/src/components/BrandMark.tsx b/frontend/src/components/BrandMark.tsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..23ea31363d417b7b04306463e5cebc19e6ccbdc9
+--- /dev/null
++++ b/frontend/src/components/BrandMark.tsx
+@@ -0,0 +1,59 @@
++import { cn } from '@/lib/utils';
++
++interface BrandMarkProps {
++  variant?: 'light' | 'dark';
++  size?: 'sm' | 'md' | 'lg';
++  className?: string;
++}
++
++const sizeStyles = {
++  sm: {
++    logo: 'h-7 w-7',
++    title: 'text-sm',
++    subtitle: 'text-xs',
++    gap: 'gap-2',
++  },
++  md: {
++    logo: 'h-8 w-8',
++    title: 'text-base',
++    subtitle: 'text-xs',
++    gap: 'gap-3',
++  },
++  lg: {
++    logo: 'h-10 w-10',
++    title: 'text-lg',
++    subtitle: 'text-sm',
++    gap: 'gap-3',
++  },
++};
++
++export function BrandMark({ variant = 'dark', size = 'md', className }: BrandMarkProps) {
++  const styles = sizeStyles[size];
++  const titleColor = variant === 'dark' ? 'text-slate-900' : 'text-white';
++  const subtitleColor = variant === 'dark' ? 'text-slate-500' : 'text-slate-300';
++
++  return (
++    <div className={cn('flex items-center', styles.gap, className)}>
++      <div className="flex items-center gap-2">
++        <img
++          src="/forbiz-logo.jpg"
++          alt="Forbiz"
++          className={cn('rounded-md object-cover shadow-sm', styles.logo)}
++        />
++        <img
++          src="/getwork-logo.jpg"
++          alt="GetWork"
++          className={cn('rounded-md object-cover shadow-sm', styles.logo)}
++        />
++      </div>
++      <div className="leading-tight">
++        <div className={cn('font-semibold tracking-wide uppercase', styles.title, titleColor)}>
++          Forbiz &amp; GetWork
++        </div>
++        <div className={cn('font-medium', styles.subtitle, subtitleColor)}>
++          Central de Ferramentas
++        </div>
++      </div>
++    </div>
++  );
++}
+diff --git a/frontend/src/components/Input.tsx b/frontend/src/components/Input.tsx
+index 69779c689c496fc22cc16f6bb36e0fa39a80de94..12a0967d5993dc4176dc20cd54a4d67b57ba292e 100644
+--- a/frontend/src/components/Input.tsx
++++ b/frontend/src/components/Input.tsx
+@@ -10,58 +10,58 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+   leftIcon?: ReactNode;
+   rightIcon?: ReactNode;
+ }
+ 
+ export const Input = forwardRef<HTMLInputElement, InputProps>(
+   ({ label, error, hint, icon, leftIcon, rightIcon, className, required, disabled, ...props }, ref) => {
+     const iconLeft = icon || leftIcon;
+     return (
+       <div className="space-y-1.5">
+         {label && (
+           <label className="block text-sm font-medium text-slate-700">
+             {label}
+             {required && <span className="text-red-500 ml-0.5">*</span>}
+           </label>
+         )}
+         <div className="relative">
+           {iconLeft && (
+             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+               {iconLeft}
+             </div>
+           )}
+           <input
+             ref={ref}
+             disabled={disabled}
+             className={cn(
+-              'w-full py-2 border rounded-md outline-none transition-all text-sm',
++              'w-full px-3 py-2 border rounded-md outline-none transition-all text-sm',
+               'focus:ring-2 focus:ring-primary/20 focus:border-primary',
+               'disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed',
+               error 
+                 ? 'border-red-300 focus:ring-red-200 focus:border-red-500' 
+                 : 'border-slate-300',
+-              iconLeft ? 'pl-10' : 'px-3',
+-              rightIcon ? 'pr-10' : 'px-3',
++              iconLeft ? 'pl-10' : null,
++              rightIcon ? 'pr-10' : null,
+               className
+             )}
+             {...props}
+           />
+           {rightIcon && (
+             <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+               {rightIcon}
+             </div>
+           )}
+           {error && (
+             <div className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500">
+               <AlertCircle className="h-4 w-4" />
+             </div>
+           )}
+         </div>
+         {error && (
+           <p className="text-xs text-red-600 flex items-center gap-1">
+             {error}
+           </p>
+         )}
+         {hint && !error && (
+           <p className="text-xs text-slate-500">{hint}</p>
+         )}
+       </div>
+     );
+diff --git a/frontend/src/layout/AppLayout.tsx b/frontend/src/layout/AppLayout.tsx
+index a6941f59a4823e12d4be5ea1c8cd7e96ed6c648c..3a0072e73f022f6b8a35daeb1b43bdf99a9e3c1e 100644
+--- a/frontend/src/layout/AppLayout.tsx
++++ b/frontend/src/layout/AppLayout.tsx
+@@ -1,22 +1,22 @@
+ import { ReactNode } from 'react';
+ import { Sidebar } from './Sidebar';
+ import { Header } from './Header';
+ 
+ interface AppLayoutProps {
+   title: string;
+   children: ReactNode;
+ }
+ 
+ export function AppLayout({ title, children }: AppLayoutProps) {
+   return (
+-    <div className="flex h-screen bg-slate-50">
++    <div className="flex h-screen bg-slate-100">
+       <Sidebar />
+       <div className="flex-1 ml-64 flex flex-col">
+         <Header title={title} />
+-        <main className="flex-1 overflow-auto p-8">
++        <main className="flex-1 overflow-auto px-8 py-6">
+           {children}
+         </main>
+       </div>
+     </div>
+   );
+ }
+diff --git a/frontend/src/layout/Header.tsx b/frontend/src/layout/Header.tsx
+index 44453b241c58eb0a01f089e9d01e650ced08cb25..96ffced2d8f496581780a6e4e2ae59324df8ae94 100644
+--- a/frontend/src/layout/Header.tsx
++++ b/frontend/src/layout/Header.tsx
+@@ -9,51 +9,51 @@ interface HeaderProps {
+ export function Header({ title }: HeaderProps) {
+   const { user, logout } = useAuth();
+   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+   const dropdownRef = useRef<HTMLDivElement>(null);
+ 
+   // Close dropdown when clicking outside
+   useEffect(() => {
+     function handleClickOutside(event: MouseEvent) {
+       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+         setIsDropdownOpen(false);
+       }
+     }
+     document.addEventListener('mousedown', handleClickOutside);
+     return () => document.removeEventListener('mousedown', handleClickOutside);
+   }, []);
+ 
+   const getInitials = (email: string) => {
+     const parts = email.split('@')[0].split('.');
+     if (parts.length >= 2) {
+       return (parts[0][0] + parts[1][0]).toUpperCase();
+     }
+     return email.slice(0, 2).toUpperCase();
+   };
+ 
+   return (
+-    <header className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-8">
++    <header className="bg-white border-b border-slate-200/80 h-16 flex items-center justify-between px-8 shadow-sm">
+       <div>
+         <h1 className="text-xl font-semibold text-slate-900">{title}</h1>
+       </div>
+ 
+       <div className="flex items-center gap-4">
+         {/* User Dropdown */}
+         <div className="relative" ref={dropdownRef}>
+           <button
+             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+             className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors"
+           >
+             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+               <span className="text-sm font-medium text-primary">
+                 {user?.email ? getInitials(user.email) : 'U'}
+               </span>
+             </div>
+             <div className="hidden sm:block text-left">
+               <p className="text-sm font-medium text-slate-900">{user?.name || 'Usuário'}</p>
+               <p className="text-xs text-slate-500">{user?.email}</p>
+             </div>
+             <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+           </button>
+ 
+           {/* Dropdown Menu */}
+           {isDropdownOpen && (
+diff --git a/frontend/src/layout/Sidebar.tsx b/frontend/src/layout/Sidebar.tsx
+index 7a7e2666fcde6c372cefc2c5a2d087822b69eec8..8dc317f358fcaf22f366fbf271c0abeec22d2636 100644
+--- a/frontend/src/layout/Sidebar.tsx
++++ b/frontend/src/layout/Sidebar.tsx
+@@ -1,87 +1,84 @@
+ import { NavLink } from 'react-router-dom';
+ import { 
+   Users, Package, Database, MessageSquareText, 
+   Zap, Send, FileCheck, Book 
+ } from 'lucide-react';
+ import { cn } from '@/lib/utils';
++import { BrandMark } from '@/components/BrandMark';
+ 
+ const navSections = [
+   {
+     title: 'Gestão',
+     items: [
+       { to: '/tenants', icon: Users, label: 'Tenants' },
+       { to: '/products', icon: Package, label: 'Produtos' },
+     ],
+   },
+   {
+     title: 'Automação WhatsApp',
+     items: [
+       { to: '/sources', icon: Database, label: 'Fontes de Dados' },
+       { to: '/templates', icon: MessageSquareText, label: 'Templates' },
+       { to: '/jobs', icon: Zap, label: 'Jobs' },
+     ],
+   },
+   {
+     title: 'Monitoramento',
+     items: [
+       { to: '/outbox', icon: Send, label: 'Mensagens' },
+       { to: '/logs', icon: FileCheck, label: 'Logs' },
+     ],
+   },
+   {
+     title: 'Suporte',
+     items: [
+       { to: '/docs', icon: Book, label: 'Documentação' },
+     ],
+   },
+ ];
+ 
+ export function Sidebar() {
+   return (
+-    <aside className="w-64 bg-slate-900 text-white flex flex-col h-screen fixed left-0 top-0">
++    <aside className="w-64 bg-slate-950 text-white flex flex-col h-screen fixed left-0 top-0 border-r border-slate-800/80">
+       {/* Logo */}
+-      <div className="p-4 border-b border-slate-800">
+-        <img 
+-          src="/logo-combined.png" 
+-          alt="Forbiz & GetWork" 
+-          className="h-12 w-auto mx-auto"
+-        />
++      <div className="p-5 border-b border-slate-800/80">
++        <BrandMark variant="light" size="sm" />
+       </div>
+ 
+-      <nav className="flex-1 p-4 space-y-6 overflow-y-auto">
++      <nav className="flex-1 px-4 py-5 space-y-6 overflow-y-auto">
+         {navSections.map((section) => (
+           <div key={section.title}>
+-            <h2 className="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
++            <h2 className="px-4 text-[11px] font-semibold text-slate-500 uppercase tracking-[0.2em] mb-2">
+               {section.title}
+             </h2>
+             <div className="space-y-1">
+               {section.items.map((item) => (
+                 <NavLink
+                   key={item.to}
+                   to={item.to}
+                   className={({ isActive }) =>
+                     cn(
+                       'flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors',
+                       isActive
+-                        ? 'bg-primary text-white'
+-                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
++                        ? 'bg-slate-800 text-white shadow-sm'
++                        : 'text-slate-300 hover:bg-slate-900 hover:text-white'
+                     )
+                   }
+                 >
+                   <item.icon className="h-5 w-5" />
+                   <span className="font-medium text-sm">{item.label}</span>
+                 </NavLink>
+               ))}
+             </div>
+           </div>
+         ))}
+       </nav>
+ 
+       <div className="p-4 border-t border-slate-800">
+         <p className="text-xs text-slate-500 text-center">
+           © 2026 Forbiz & GetWork
+         </p>
+       </div>
+     </aside>
+   );
+ }
+diff --git a/frontend/src/pages/LoginPage.tsx b/frontend/src/pages/LoginPage.tsx
+index 901fe92c92a12078fcf3fa792cc2e5748527ae2a..86ef01a85eefffda20358bc54ce75a7f1720e4b1 100644
+--- a/frontend/src/pages/LoginPage.tsx
++++ b/frontend/src/pages/LoginPage.tsx
+@@ -1,180 +1,170 @@
+ import { useState, FormEvent } from 'react';
+ import { useNavigate, Link } from 'react-router-dom';
+ import { useAuth } from '@/auth/AuthContext';
+ import { Loader2, AlertCircle, Lock, Mail, CheckCircle } from 'lucide-react';
++import { BrandMark } from '@/components/BrandMark';
+ 
+ export function LoginPage() {
+   const [email, setEmail] = useState('');
+   const [password, setPassword] = useState('');
+   const [error, setError] = useState('');
+   const [loading, setLoading] = useState(false);
+   const { login } = useAuth();
+   const navigate = useNavigate();
+ 
+   const handleSubmit = async (e: FormEvent) => {
+     e.preventDefault();
+     setError('');
+     setLoading(true);
+ 
+     const result = await login(email, password);
+ 
+     if (result.success) {
+       navigate('/tenants');
+     } else {
+       setError(result.error || 'Erro ao fazer login');
+     }
+ 
+     setLoading(false);
+   };
+ 
+   return (
+-    <div className="min-h-screen bg-slate-900 flex">
++    <div className="min-h-screen bg-slate-950 flex">
+       {/* Left Panel - Branding */}
+-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-800 to-slate-900 items-center justify-center p-12">
+-        <div className="max-w-md text-white">
+-          {/* Logo */}
+-          <div className="mb-8">
+-            <img 
+-              src="/logo-combined.png" 
+-              alt="Forbiz & GetWork" 
+-              className="h-16 w-auto"
+-            />
+-          </div>
++      <div className="hidden lg:flex lg:w-1/2 bg-slate-950 items-center justify-center p-12">
++        <div className="max-w-md text-white space-y-8">
++          <BrandMark variant="light" size="lg" />
+           
+           <h2 className="text-2xl font-semibold mb-4">
+             Gerencie suas integrações com Senior X
+           </h2>
+           
+           <p className="text-white/70 leading-relaxed mb-8">
+             Plataforma centralizada para gerenciamento de tenants, notificações WhatsApp, 
+             e integração com GED, Sign e HCM.
+           </p>
+           
+           <div className="space-y-3">
+             <div className="flex items-center gap-3 text-white/90">
+-              <div className="h-8 w-8 rounded-full bg-primary/30 flex items-center justify-center">
+-                <CheckCircle className="h-4 w-4 text-primary" />
++              <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center">
++                <CheckCircle className="h-4 w-4 text-white" />
+               </div>
+               <span>Notificações WhatsApp automatizadas</span>
+             </div>
+             <div className="flex items-center gap-3 text-white/90">
+-              <div className="h-8 w-8 rounded-full bg-primary/30 flex items-center justify-center">
+-                <CheckCircle className="h-4 w-4 text-primary" />
++              <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center">
++                <CheckCircle className="h-4 w-4 text-white" />
+               </div>
+               <span>Integração com GED e Sign</span>
+             </div>
+             <div className="flex items-center gap-3 text-white/90">
+-              <div className="h-8 w-8 rounded-full bg-primary/30 flex items-center justify-center">
+-                <CheckCircle className="h-4 w-4 text-primary" />
++              <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center">
++                <CheckCircle className="h-4 w-4 text-white" />
+               </div>
+               <span>Extensão para Cercas Virtuais</span>
+             </div>
+             <div className="flex items-center gap-3 text-white/90">
+-              <div className="h-8 w-8 rounded-full bg-primary/30 flex items-center justify-center">
+-                <CheckCircle className="h-4 w-4 text-primary" />
++              <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center">
++                <CheckCircle className="h-4 w-4 text-white" />
+               </div>
+               <span>Multi-tenant com isolamento</span>
+             </div>
+           </div>
+         </div>
+       </div>
+ 
+       {/* Right Panel - Login Form */}
+-      <div className="flex-1 flex items-center justify-center p-8">
++      <div className="flex-1 flex items-center justify-center p-8 bg-slate-100">
+         <div className="w-full max-w-md">
+           {/* Mobile Logo */}
+           <div className="lg:hidden flex items-center justify-center mb-8">
+-            <img 
+-              src="/logo-combined.png" 
+-              alt="Forbiz & GetWork" 
+-              className="h-12 w-auto"
+-            />
++            <BrandMark variant="dark" size="md" />
+           </div>
+ 
+-          <div className="bg-white rounded-xl shadow-2xl p-8">
++          <div className="bg-white rounded-2xl shadow-xl border border-slate-200/70 p-8">
+             <div className="text-center mb-8">
+               <h2 className="text-2xl font-bold text-slate-900">Bem-vindo de volta</h2>
+               <p className="text-slate-600 mt-1">Entre com suas credenciais para continuar</p>
+             </div>
+ 
+             <form onSubmit={handleSubmit} className="space-y-5">
+               <div>
+                 <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1.5">
+                   Email
+                 </label>
+                 <div className="relative">
+                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                   <input
+                     id="email"
+                     type="email"
+                     value={email}
+                     onChange={(e) => setEmail(e.target.value)}
+                     required
+-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition text-sm"
++                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition text-sm bg-white"
+                     placeholder="seu@email.com"
+                   />
+                 </div>
+               </div>
+ 
+               <div>
+                 <div className="flex items-center justify-between mb-1.5">
+                   <label htmlFor="password" className="block text-sm font-medium text-slate-700">
+                     Senha
+                   </label>
+                   <Link 
+                     to="/forgot-password" 
+                     className="text-sm text-primary hover:text-primary/80 font-medium"
+                   >
+                     Esqueceu a senha?
+                   </Link>
+                 </div>
+                 <div className="relative">
+                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                   <input
+                     id="password"
+                     type="password"
+                     value={password}
+                     onChange={(e) => setPassword(e.target.value)}
+                     required
+-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition text-sm"
++                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition text-sm bg-white"
+                     placeholder="••••••••"
+                   />
+                 </div>
+               </div>
+ 
+               {error && (
+                 <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                   <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                   <span>{error}</span>
+                 </div>
+               )}
+ 
+               <button
+                 type="submit"
+                 disabled={loading}
+-                className="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
++                className="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm"
+               >
+                 {loading ? (
+                   <>
+                     <Loader2 className="h-5 w-5 animate-spin" />
+                     Entrando...
+                   </>
+                 ) : (
+                   'Entrar'
+                 )}
+               </button>
+             </form>
+ 
+             <div className="mt-6 text-center">
+               <p className="text-sm text-slate-600">
+                 Não tem uma conta?{' '}
+                 <Link 
+                   to="/register" 
+                   className="text-primary hover:text-primary/80 font-medium"
+                 >
+                   Criar conta
+                 </Link>
+               </p>
+             </div>
+           </div>
+ 
+diff --git a/frontend/src/pages/RegisterPage.tsx b/frontend/src/pages/RegisterPage.tsx
+index 2b413077bb3eeaaa73eda3986f78957f1c645988..bdd24e874bcc5c7c0901c97589c104c8e9e228d6 100644
+--- a/frontend/src/pages/RegisterPage.tsx
++++ b/frontend/src/pages/RegisterPage.tsx
+@@ -1,29 +1,30 @@
+ import { useState } from 'react';
+ import { Link, useNavigate } from 'react-router-dom';
+ import { Button } from '@/components/Button';
+ import { Input } from '@/components/Input';
++import { BrandMark } from '@/components/BrandMark';
+ import { apiClient } from '@/api/client';
+ import { Mail, Lock, User, ArrowLeft, CheckCircle } from 'lucide-react';
+ import { toast } from 'sonner';
+ 
+ export function RegisterPage() {
+   const navigate = useNavigate();
+   const [formData, setFormData] = useState({
+     name: '',
+     email: '',
+     password: '',
+     confirmPassword: '',
+   });
+   const [loading, setLoading] = useState(false);
+   const [success, setSuccess] = useState(false);
+ 
+   const handleSubmit = async (e: React.FormEvent) => {
+     e.preventDefault();
+ 
+     // Validações
+     if (!formData.name.trim()) {
+       toast.error('Nome é obrigatório');
+       return;
+     }
+ 
+     if (!formData.email.trim()) {
+@@ -36,124 +37,114 @@ export function RegisterPage() {
+       return;
+     }
+ 
+     if (formData.password !== formData.confirmPassword) {
+       toast.error('As senhas não coincidem');
+       return;
+     }
+ 
+     setLoading(true);
+     const response = await apiClient.post('/auth/register', {
+       name: formData.name,
+       email: formData.email,
+       password: formData.password,
+     });
+     setLoading(false);
+ 
+     if (response.error) {
+       toast.error(response.error.message || 'Erro ao criar conta');
+     } else {
+       setSuccess(true);
+     }
+   };
+ 
+   if (success) {
+     return (
+-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
++      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+         <div className="w-full max-w-md">
+-          <div className="bg-white rounded-2xl shadow-2xl p-8 text-center">
++          <div className="bg-white rounded-2xl shadow-xl border border-slate-200/70 p-8 text-center">
+             <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+               <CheckCircle className="h-8 w-8 text-green-600" />
+             </div>
+             <h2 className="text-2xl font-bold text-slate-900 mb-2">Conta Criada!</h2>
+             <p className="text-slate-600 mb-6">
+               Sua conta foi criada com sucesso. Você já pode fazer login.
+             </p>
+             <Button onClick={() => navigate('/login')} className="w-full">
+               Ir para Login
+             </Button>
+           </div>
+         </div>
+       </div>
+     );
+   }
+ 
+   return (
+-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex">
++    <div className="min-h-screen bg-slate-950 flex">
+       {/* Left side - Branding */}
+       <div className="hidden lg:flex lg:w-1/2 flex-col justify-center items-center p-12 text-white">
+-        <div className="max-w-md">
+-          <div className="mb-8">
+-            <img 
+-              src="/logo-combined.png" 
+-              alt="Forbiz & GetWork" 
+-              className="h-14 w-auto"
+-            />
+-          </div>
++        <div className="max-w-md space-y-8">
++          <BrandMark variant="light" size="lg" />
+           
+           <h2 className="text-4xl font-bold mb-4">
+             Crie sua conta
+           </h2>
+           <p className="text-lg text-slate-300 mb-8">
+             Junte-se à plataforma e tenha acesso às ferramentas de automação 
+             integradas com Senior X.
+           </p>
+           
+           <div className="space-y-4">
+             <div className="flex items-center gap-3 text-slate-300">
+-              <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+-                <CheckCircle className="h-4 w-4 text-primary" />
++              <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center">
++                <CheckCircle className="h-4 w-4 text-white" />
+               </div>
+               <span>Notificações WhatsApp automatizadas</span>
+             </div>
+             <div className="flex items-center gap-3 text-slate-300">
+-              <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+-                <CheckCircle className="h-4 w-4 text-primary" />
++              <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center">
++                <CheckCircle className="h-4 w-4 text-white" />
+               </div>
+               <span>Integração com GED e Sign</span>
+             </div>
+             <div className="flex items-center gap-3 text-slate-300">
+-              <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+-                <CheckCircle className="h-4 w-4 text-primary" />
++              <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center">
++                <CheckCircle className="h-4 w-4 text-white" />
+               </div>
+               <span>Extensão para Cercas Virtuais</span>
+             </div>
+           </div>
+         </div>
+       </div>
+ 
+       {/* Right side - Form */}
+-      <div className="w-full lg:w-1/2 flex items-center justify-center p-4 lg:p-12">
++      <div className="w-full lg:w-1/2 flex items-center justify-center p-4 lg:p-12 bg-slate-100">
+         <div className="w-full max-w-md">
+-          <div className="bg-white rounded-2xl shadow-2xl p-8">
++          <div className="bg-white rounded-2xl shadow-xl border border-slate-200/70 p-8">
+             {/* Mobile branding */}
+             <div className="lg:hidden flex items-center justify-center mb-6">
+-              <img 
+-                src="/logo-combined.png" 
+-                alt="Forbiz & GetWork" 
+-                className="h-10 w-auto"
+-              />
++              <BrandMark variant="dark" size="md" />
+             </div>
+ 
+             <div className="mb-6">
+               <h2 className="text-2xl font-bold text-slate-900">Criar Conta</h2>
+               <p className="text-slate-500 mt-1">Preencha os dados abaixo</p>
+             </div>
+ 
+             <form onSubmit={handleSubmit} className="space-y-4">
+               <Input
+                 label="Nome completo"
+                 type="text"
+                 value={formData.name}
+                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                 placeholder="Seu nome"
+                 icon={<User className="h-5 w-5" />}
+                 required
+               />
+ 
+               <Input
+                 label="Email"
+                 type="email"
+                 value={formData.email}
+                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                 placeholder="seu@email.com"
+                 icon={<Mail className="h-5 w-5" />}
+diff --git a/frontend/src/pages/TenantsPage.tsx b/frontend/src/pages/TenantsPage.tsx
+index 0146538a41e920f45ab944734d21a8b92475daae..37e20ace5841bf5335727bcc5b2eb06be5bc4c26 100644
+--- a/frontend/src/pages/TenantsPage.tsx
++++ b/frontend/src/pages/TenantsPage.tsx
+@@ -129,56 +129,56 @@ export function TenantsPage() {
+       setIsModalOpen(false);
+       loadTenants();
+     }
+   };
+ 
+   const columns = [
+     { 
+       header: 'Nome', 
+       accessor: (row: Tenant) => (
+         <div className="flex items-center gap-3">
+           <div className="h-9 w-9 rounded-lg bg-slate-100 flex items-center justify-center">
+             <Building2 className="h-5 w-5 text-slate-500" />
+           </div>
+           <div>
+             <div className="font-medium text-slate-900">{row.name}</div>
+             <div className="text-xs text-slate-500">{row.slug || row.domain}</div>
+           </div>
+         </div>
+       ),
+     },
+     {
+       header: 'Status',
+       accessor: (row: Tenant) => (
+         <span
+           className={`inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full ${
+-            row.isActive 
++            (row.active ?? row.isActive) 
+               ? 'bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20' 
+               : 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/20'
+           }`}
+         >
+-          {row.isActive ? 'Ativo' : 'Inativo'}
++          {(row.active ?? row.isActive) ? 'Ativo' : 'Inativo'}
+         </span>
+       ),
+     },
+     {
+       header: 'Ações',
+       accessor: (row: Tenant) => (
+         <div className="flex gap-1">
+           <Button 
+             size="sm" 
+             variant="ghost" 
+             onClick={() => navigate(`/tenants/${row.id}/products`)}
+             title="Gerenciar produtos"
+           >
+             <Package className="h-4 w-4" />
+           </Button>
+           <Button 
+             size="sm" 
+             variant="ghost" 
+             onClick={() => navigate(`/tenants/${row.id}`)}
+             title="Configurações do tenant"
+           >
+             <Settings className="h-4 w-4" />
+           </Button>
+           <Button 
+             size="sm" 
+diff --git a/prisma/schema.prisma b/prisma/schema.prisma
+index 8f7a1a6463b4da9d7fb3087189b93904ad9e49b2..1351e1b63e0260ef91772cb122fac0bed7d2065f 100644
+--- a/prisma/schema.prisma
++++ b/prisma/schema.prisma
+@@ -4,50 +4,63 @@
+ 
+ generator client {
+   provider = "prisma-client-js"
+ }
+ 
+ datasource db {
+   provider  = "postgresql"
+   url       = env("DATABASE_URL")
+   directUrl = env("DIRECT_URL")
+ }
+ 
+ // --- Usuários do sistema (admin interno) ---
+ model User {
+   id        String   @id @default(uuid())
+   email     String   @unique
+   password  String
+   name      String?
+   role      UserRole @default(ADMIN)
+   active    Boolean  @default(true)
+   createdAt DateTime @default(now()) @map("created_at")
+   updatedAt DateTime @updatedAt @map("updated_at")
+ 
+   @@map("users")
+ }
+ 
++model Product {
++  id          String   @id @default(uuid())
++  code        String   @unique
++  name        String
++  description String?
++  icon        String?
++  isActive    Boolean  @default(true) @map("is_active")
++  createdAt   DateTime @default(now()) @map("created_at")
++  updatedAt   DateTime @updatedAt @map("updated_at")
++
++  @@map("products")
++}
++
+ enum UserRole {
+   ADMIN
+   VIEWER
+ }
+ 
+ // --- Tenants (clientes do SaaS) ---
+ model Tenant {
+   id        String   @id @default(uuid())
+   name      String
+   slug      String   @unique
+   active    Boolean  @default(true)
+   metadata  Json?
+   createdAt DateTime @default(now()) @map("created_at")
+   updatedAt DateTime @updatedAt @map("updated_at")
+ 
+   seniorCredentials    SeniorCredentials?
+   notificationChannels NotificationChannel[]
+   rules                Rule[]
+   schedules            Schedule[]
+   outboxMessages       OutboxMessage[]
+   deliveryLogs         DeliveryLog[]
+   idempotencyKeys      IdempotencyKey[]
+ 
+   @@map("tenants")
+ }

@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker-compose exec:*)",
+      "Bash(1 <<'EOF'\nALTER TABLE senior_credentials ADD COLUMN IF NOT EXISTS senior_tenant VARCHAR\\(255\\) DEFAULT '';\nALTER TABLE senior_credentials ADD COLUMN IF NOT EXISTS username VARCHAR\\(255\\) DEFAULT '';\nALTER TABLE senior_credentials ADD COLUMN IF NOT EXISTS password VARCHAR\\(255\\);\nALTER TABLE senior_credentials ADD COLUMN IF NOT EXISTS environment VARCHAR\\(50\\) DEFAULT 'production';\nALTER TABLE senior_credentials ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;\nALTER TABLE senior_credentials ADD COLUMN IF NOT EXISTS last_auth_at TIMESTAMP;\nALTER TABLE senior_credentials ADD COLUMN IF NOT EXISTS last_auth_error TEXT;\nALTER TABLE senior_credentials ADD COLUMN IF NOT EXISTS token_expires_at TIMESTAMP;\nEOF)",
+      "Bash(docker-compose restart:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(curl -s -X POST \"https://platform.senior.com.br/t/senior.com.br/bridge/1.0/rest/platform/authentication/actions/login\" -H \"Content-Type: application/json\" -d '{\"\"username\"\":\"\"gci@holdingterraverde.com.br\"\",\"\"password\"\":\"\"03Lavorogci@04\"\"}')",
+      "Bash(docker-compose build:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(1 <<'EOF'\nCREATE TABLE IF NOT EXISTS products \\(\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid\\(\\),\n  code VARCHAR\\(50\\) UNIQUE NOT NULL,\n  name VARCHAR\\(255\\) NOT NULL,\n  description TEXT,\n  icon VARCHAR\\(50\\),\n  is_active BOOLEAN DEFAULT true,\n  created_at TIMESTAMP DEFAULT NOW\\(\\),\n  updated_at TIMESTAMP DEFAULT NOW\\(\\)\n\\);\nEOF)",
+      "Bash(1 <<'EOF'\nCREATE TABLE IF NOT EXISTS tenant_products \\(\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid\\(\\),\n  tenant_id UUID NOT NULL REFERENCES tenants\\(id\\) ON DELETE CASCADE,\n  product_id UUID NOT NULL REFERENCES products\\(id\\) ON DELETE CASCADE,\n  monthly_value DECIMAL\\(10, 2\\) NOT NULL DEFAULT 0,\n  acquisition_date DATE,\n  expiration_date DATE,\n  is_active BOOLEAN DEFAULT true,\n  notes TEXT,\n  created_at TIMESTAMP DEFAULT NOW\\(\\),\n  updated_at TIMESTAMP DEFAULT NOW\\(\\),\n  UNIQUE\\(tenant_id, product_id\\)\n\\);\nEOF)",
+      "Bash(docker-compose logs:*)",
+      "Bash(npx prisma db push:*)",
+      "Bash(npx prisma@5.22.0 db push:*)"
+    ]
+  }
+}

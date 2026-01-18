@@ -163,8 +163,47 @@ model DataSource {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   rules Rule[]
+  messageTemplates MessageTemplate[]
 
   @@map("data_sources")
+}
+
+// --- Templates de Mensagem (com placeholders) ---
+model MessageTemplate {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+
+  // Vínculo com fonte de dados (opcional)
+  dataSourceId String? @map("data_source_id")
+
+  // Conteúdo da mensagem com placeholders
+  // Exemplo: "Olá {{signer.name}}, você tem um documento pendente: {{envelope.name}}"
+  messageBody String @map("message_body") @db.Text
+
+  // Configuração do destinatário
+  recipientField    String  @default("signers[].phoneNumber") @map("recipient_field")  // Campo com telefone
+  recipientNameField String? @map("recipient_name_field")  // Campo com nome (para personalização)
+
+  // Configuração do link de assinatura
+  signUrlEnabled   Boolean @default(true) @map("sign_url_enabled")
+  signUrlBaseField String? @map("sign_url_base_field")  // Se usar campo do response
+  signUrlTemplate  String? @map("sign_url_template")    // Template manual: "https://sign.com/{{envelope.id}}"
+
+  // Iteração sobre array (para enviar para múltiplos signatários)
+  iterateOverField String? @map("iterate_over_field")  // Ex: "signers" para iterar sobre cada signatário
+  filterExpression String? @map("filter_expression")   // Ex: "status == 'PENDING'" para filtrar
+
+  // Status
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  dataSource DataSource? @relation(fields: [dataSourceId], references: [id])
+  rules      Rule[]
+
+  @@map("message_templates")
 }
 
 // --- Regras de notificação ---
@@ -173,6 +212,7 @@ model Rule {
   tenantId    String  @map("tenant_id")
   channelId   String? @map("channel_id")
   dataSourceId String? @map("data_source_id")
+  messageTemplateId String? @map("message_template_id")
   name        String
   description String?
   enabled     Boolean @default(true)
@@ -180,6 +220,7 @@ model Rule {
   seniorEndpointPath String? @map("senior_endpoint_path")
   pollStrategy       String  @default("SIMPLE") @map("poll_strategy")
 
+  // Template inline (legado) ou usar messageTemplateId
   messageTemplate   String @map("message_template")
   recipientStrategy String @default("FIELD") @map("recipient_strategy")
   recipientField    String? @map("recipient_field")
@@ -190,12 +231,13 @@ model Rule {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  tenant         Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  channel        NotificationChannel? @relation(fields: [channelId], references: [id])
-  dataSource     DataSource?          @relation(fields: [dataSourceId], references: [id])
-  schedules      ScheduleRule[]
-  outboxMessages OutboxMessage[]
-  deliveryLogs   DeliveryLog[]
+  tenant          Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  channel         NotificationChannel? @relation(fields: [channelId], references: [id])
+  dataSource      DataSource?          @relation(fields: [dataSourceId], references: [id])
+  msgTemplate     MessageTemplate?     @relation(fields: [messageTemplateId], references: [id])
+  schedules       ScheduleRule[]
+  outboxMessages  OutboxMessage[]
+  deliveryLogs    DeliveryLog[]
 
   @@map("rules")
 }

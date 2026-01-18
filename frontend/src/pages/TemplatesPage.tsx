@@ -5,111 +5,135 @@ import { Table } from '@/components/Table';
 import { Modal } from '@/components/Modal';
 import { Input } from '@/components/Input';
 import { apiClient } from '@/api/client';
-import { WhatsAppTemplate, Tenant, templateTypeLabels, TemplateType } from '@/api/types';
-import { Plus, Edit, Trash2, MessageSquareText, AlertTriangle, Eye } from 'lucide-react';
+import { MessageTemplate, MessageTemplatePreview, DataSource, Tenant } from '@/api/types';
+import { Plus, Edit, Trash2, AlertTriangle, Eye, Database, Link2, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 
-const TEMPLATE_TYPE_OPTIONS: { value: TemplateType; label: string; description: string }[] = [
-  { 
-    value: 'meta_template', 
-    label: 'Template Meta (Aprovado)', 
-    description: 'Use um template já aprovado pela Meta no WhatsApp Business' 
-  },
-  { 
-    value: 'custom_text', 
-    label: 'Texto Personalizado', 
-    description: 'Crie uma mensagem personalizada (apenas para modo mock)' 
-  },
-  { 
-    value: 'senior_notification', 
-    label: 'Notificação Senior X', 
-    description: 'Busque uma notificação existente no Senior X' 
-  },
-];
+const COMMON_PLACEHOLDERS = {
+  envelope: [
+    { path: 'name', label: 'Nome do Envelope' },
+    { path: 'status', label: 'Status' },
+    { path: 'createdBy', label: 'Criado por' },
+    { path: 'createdDate', label: 'Data de Criação' },
+    { path: 'expirationDate', label: 'Data de Expiração' },
+  ],
+  signer: [
+    { path: 'signers[0].name', label: 'Nome do Signatário' },
+    { path: 'signers[0].email', label: 'Email' },
+    { path: 'signers[0].phoneNumber', label: 'Telefone' },
+  ],
+  document: [
+    { path: 'documents[0].originalFilename', label: 'Nome do Arquivo' },
+  ],
+};
 
 export function TemplatesPage() {
-  const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
+  const [templates, setTemplates] = useState<MessageTemplate[]>([]);
+  const [dataSources, setDataSources] = useState<DataSource[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<WhatsAppTemplate | null>(null);
-  const [selectedTenantFilter, setSelectedTenantFilter] = useState<string>('');
+  const [selectedTemplate, setSelectedTemplate] = useState<MessageTemplate | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [previewData, setPreviewData] = useState<MessageTemplatePreview | null>(null);
+  const [previewTenantId, setPreviewTenantId] = useState<string>('');
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const [formData, setFormData] = useState({
-    tenantId: '',
     name: '',
-    displayName: '',
-    templateType: 'custom_text' as TemplateType,
-    metaTemplateName: '',
-    metaTemplateLanguage: 'pt_BR',
+    description: '',
+    dataSourceId: '' as string | null,
     messageBody: '',
-    fieldMapping: '{}',
-    seniorNotificationEndpoint: '',
+    recipientField: 'signers[].phoneNumber',
+    recipientNameField: '',
+    signUrlEnabled: true,
+    signUrlTemplate: '',
+    iterateOverField: 'signers',
+    filterExpression: '',
     isActive: true,
   });
 
   const loadData = async () => {
     setLoading(true);
-    
-    const [templatesRes, tenantsRes] = await Promise.all([
-      apiClient.get<WhatsAppTemplate[]>(`/whatsapp/templates${selectedTenantFilter ? `?tenantId=${selectedTenantFilter}` : ''}`),
+
+    const [templatesRes, dataSourcesRes, tenantsRes] = await Promise.all([
+      apiClient.get<MessageTemplate[]>('/templates'),
+      apiClient.get<DataSource[]>('/datasources'),
       apiClient.get<Tenant[]>('/tenants?pageSize=100'),
     ]);
 
     if (templatesRes.data) setTemplates(templatesRes.data);
-    if (tenantsRes.data) setTenants(tenantsRes.data);
-    
+    if (dataSourcesRes.data) setDataSources(dataSourcesRes.data);
+    if (tenantsRes.data) {
+      setTenants(tenantsRes.data);
+      if (tenantsRes.data.length > 0 && !previewTenantId) {
+        setPreviewTenantId(tenantsRes.data[0].id);
+      }
+    }
+
     setLoading(false);
   };
 
   useEffect(() => {
     loadData();
-  }, [selectedTenantFilter]);
+  }, []);
 
   const handleCreate = () => {
     setSelectedTemplate(null);
     setFormData({
-      tenantId: selectedTenantFilter || (tenants[0]?.id || ''),
       name: '',
-      displayName: '',
-      templateType: 'custom_text',
-      metaTemplateName: '',
-      metaTemplateLanguage: 'pt_BR',
-      messageBody: 'Olá {{nome}},\n\nVocê tem um documento pendente de assinatura: {{documento}}.\n\nAcesse: {{link}}',
-      fieldMapping: '{\n  "nome": "signerName",\n  "documento": "documentName",\n  "link": "signatureLink"\n}',
-      seniorNotificationEndpoint: '',
+      description: '',
+      dataSourceId: dataSources[0]?.id || null,
+      messageBody: `Olá {{signers[0].name}},
+
+Você tem um documento pendente de assinatura: *{{name}}*
+
+Acesse o link abaixo para assinar:
+{{signUrl}}
+
+Este documento expira em {{expirationDate}}.
+
+Atenciosamente,
+{{tenantName}}`,
+      recipientField: 'signers[].phoneNumber',
+      recipientNameField: 'signers[].name',
+      signUrlEnabled: true,
+      signUrlTemplate: '',
+      iterateOverField: 'signers',
+      filterExpression: "status == 'PENDING'",
       isActive: true,
     });
     setIsModalOpen(true);
   };
 
-  const handleEdit = (template: WhatsAppTemplate) => {
+  const handleEdit = (template: MessageTemplate) => {
     setSelectedTemplate(template);
     setFormData({
-      tenantId: template.tenantId,
       name: template.name,
-      displayName: template.displayName || '',
-      templateType: template.templateType,
-      metaTemplateName: template.metaTemplateName || '',
-      metaTemplateLanguage: template.metaTemplateLanguage,
-      messageBody: template.messageBody || '',
-      fieldMapping: JSON.stringify(template.fieldMapping, null, 2),
-      seniorNotificationEndpoint: template.seniorNotificationEndpoint || '',
+      description: template.description || '',
+      dataSourceId: template.dataSourceId,
+      messageBody: template.messageBody,
+      recipientField: template.recipientField,
+      recipientNameField: template.recipientNameField || '',
+      signUrlEnabled: template.signUrlEnabled,
+      signUrlTemplate: template.signUrlTemplate || '',
+      iterateOverField: template.iterateOverField || '',
+      filterExpression: template.filterExpression || '',
       isActive: template.isActive,
     });
     setIsModalOpen(true);
   };
 
-  const handleDeleteClick = (template: WhatsAppTemplate) => {
+  const handleDeleteClick = (template: MessageTemplate) => {
     setSelectedTemplate(template);
     setIsDeleteModalOpen(true);
   };
 
-  const handlePreview = (template: WhatsAppTemplate) => {
+  const handlePreviewClick = (template: MessageTemplate) => {
     setSelectedTemplate(template);
+    setPreviewData(null);
     setIsPreviewModalOpen(true);
   };
 
@@ -117,7 +141,7 @@ export function TemplatesPage() {
     if (!selectedTemplate) return;
 
     setSubmitting(true);
-    const response = await apiClient.delete(`/whatsapp/templates/${selectedTemplate.id}`);
+    const response = await apiClient.delete(`/templates/${selectedTemplate.id}`);
     setSubmitting(false);
 
     if (response.error) {
@@ -129,46 +153,55 @@ export function TemplatesPage() {
     }
   };
 
+  const handlePreview = async () => {
+    if (!selectedTemplate || !previewTenantId) {
+      toast.error('Selecione um tenant para preview');
+      return;
+    }
+
+    setPreviewLoading(true);
+    const response = await apiClient.post<MessageTemplatePreview>(`/templates/${selectedTemplate.id}/preview`, {
+      tenantId: previewTenantId,
+    });
+    setPreviewLoading(false);
+
+    if (response.error) {
+      toast.error(response.error.message);
+    } else if (response.data) {
+      setPreviewData(response.data);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.tenantId) {
-      toast.error('Selecione um tenant');
-      return;
-    }
     if (!formData.name.trim()) {
       toast.error('Nome é obrigatório');
       return;
     }
-
-    // Validar JSON do field mapping
-    let fieldMapping = {};
-    try {
-      fieldMapping = JSON.parse(formData.fieldMapping);
-    } catch {
-      toast.error('Mapeamento de campos deve ser um JSON válido');
-      return;
-    }
-
-    // Validações específicas por tipo
-    if (formData.templateType === 'meta_template' && !formData.metaTemplateName.trim()) {
-      toast.error('Nome do template Meta é obrigatório');
-      return;
-    }
-    if (formData.templateType === 'custom_text' && !formData.messageBody.trim()) {
+    if (!formData.messageBody.trim()) {
       toast.error('Corpo da mensagem é obrigatório');
       return;
     }
 
     setSubmitting(true);
     const payload = {
-      ...formData,
-      fieldMapping,
+      name: formData.name,
+      description: formData.description || undefined,
+      dataSourceId: formData.dataSourceId || null,
+      messageBody: formData.messageBody,
+      recipientField: formData.recipientField,
+      recipientNameField: formData.recipientNameField || null,
+      signUrlEnabled: formData.signUrlEnabled,
+      signUrlTemplate: formData.signUrlTemplate || null,
+      iterateOverField: formData.iterateOverField || null,
+      filterExpression: formData.filterExpression || null,
+      isActive: formData.isActive,
     };
 
     const response = selectedTemplate
-      ? await apiClient.put(`/whatsapp/templates/${selectedTemplate.id}`, payload)
-      : await apiClient.post('/whatsapp/templates', payload);
+      ? await apiClient.put(`/templates/${selectedTemplate.id}`, payload)
+      : await apiClient.post('/templates', payload);
     setSubmitting(false);
 
     if (response.error) {
@@ -180,57 +213,75 @@ export function TemplatesPage() {
     }
   };
 
+  const insertPlaceholder = (placeholder: string) => {
+    const textarea = document.getElementById('messageBody') as HTMLTextAreaElement;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const text = formData.messageBody;
+      const before = text.substring(0, start);
+      const after = text.substring(end);
+      const newText = `${before}{{${placeholder}}}${after}`;
+      setFormData({ ...formData, messageBody: newText });
+
+      setTimeout(() => {
+        textarea.focus();
+        const newPos = start + placeholder.length + 4;
+        textarea.setSelectionRange(newPos, newPos);
+      }, 0);
+    }
+  };
+
   const columns = [
     {
       header: 'Nome',
-      accessor: (row: WhatsAppTemplate) => (
+      accessor: (row: MessageTemplate) => (
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-lg bg-green-100 flex items-center justify-center">
-            <MessageSquareText className="h-5 w-5 text-green-600" />
+          <div className="h-9 w-9 rounded-lg bg-indigo-100 flex items-center justify-center">
+            <MessageSquare className="h-5 w-5 text-indigo-600" />
           </div>
           <div>
-            <div className="font-medium text-slate-900">{row.displayName || row.name}</div>
-            <div className="text-xs text-slate-500">{row.name}</div>
+            <div className="font-medium text-slate-900">{row.name}</div>
+            <div className="text-xs text-slate-500">{row.description || 'Sem descrição'}</div>
           </div>
         </div>
       ),
     },
     {
-      header: 'Tipo',
-      accessor: (row: WhatsAppTemplate) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-          row.templateType === 'meta_template' 
-            ? 'bg-blue-100 text-blue-700'
-            : row.templateType === 'custom_text'
-            ? 'bg-purple-100 text-purple-700'
-            : 'bg-orange-100 text-orange-700'
-        }`}>
-          {templateTypeLabels[row.templateType]}
-        </span>
+      header: 'Fonte de Dados',
+      accessor: (row: MessageTemplate) => (
+        row.dataSource ? (
+          <div className="flex items-center gap-2">
+            <Database className="h-4 w-4 text-purple-500" />
+            <span className="text-sm text-slate-600">{row.dataSource.name}</span>
+          </div>
+        ) : (
+          <span className="text-sm text-slate-400">Nenhuma</span>
+        )
       ),
     },
     {
-      header: 'Tenant',
-      accessor: (row: WhatsAppTemplate) => (
+      header: 'Destinatário',
+      accessor: (row: MessageTemplate) => (
+        <code className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-600">
+          {row.recipientField}
+        </code>
+      ),
+    },
+    {
+      header: 'Regras',
+      accessor: (row: MessageTemplate) => (
         <span className="text-sm text-slate-600">
-          {row.tenant?.name || tenants.find(t => t.id === row.tenantId)?.name || '-'}
+          {row._count?.rules || 0}
         </span>
-      ),
-    },
-    {
-      header: 'Preview',
-      accessor: (row: WhatsAppTemplate) => (
-        <div className="max-w-xs truncate text-sm text-slate-500">
-          {row.messageBody || row.metaTemplateName || '-'}
-        </div>
       ),
     },
     {
       header: 'Status',
-      accessor: (row: WhatsAppTemplate) => (
+      accessor: (row: MessageTemplate) => (
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-          row.isActive 
-            ? 'bg-green-100 text-green-700' 
+          row.isActive
+            ? 'bg-green-100 text-green-700'
             : 'bg-slate-100 text-slate-500'
         }`}>
           {row.isActive ? 'Ativo' : 'Inativo'}
@@ -239,12 +290,12 @@ export function TemplatesPage() {
     },
     {
       header: 'Ações',
-      accessor: (row: WhatsAppTemplate) => (
+      accessor: (row: MessageTemplate) => (
         <div className="flex items-center gap-1">
           <button
-            onClick={() => handlePreview(row)}
-            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-            title="Visualizar"
+            onClick={() => handlePreviewClick(row)}
+            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+            title="Preview"
           >
             <Eye className="h-4 w-4" />
           </button>
@@ -259,6 +310,7 @@ export function TemplatesPage() {
             onClick={() => handleDeleteClick(row)}
             className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             title="Excluir"
+            disabled={row._count && row._count.rules > 0}
           >
             <Trash2 className="h-4 w-4" />
           </button>
@@ -274,29 +326,13 @@ export function TemplatesPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <p className="text-slate-600">
-              Configure os modelos de mensagem para envio via WhatsApp.
+              Configure templates de mensagem para notificações WhatsApp com placeholders dinâmicos.
             </p>
           </div>
           <Button onClick={handleCreate}>
             <Plus className="h-4 w-4 mr-2" />
             Novo Template
           </Button>
-        </div>
-
-        {/* Filtros */}
-        <div className="flex items-center gap-4">
-          <select
-            value={selectedTenantFilter}
-            onChange={(e) => setSelectedTenantFilter(e.target.value)}
-            className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-          >
-            <option value="">Todos os tenants</option>
-            {tenants.map((tenant) => (
-              <option key={tenant.id} value={tenant.id}>
-                {tenant.name}
-              </option>
-            ))}
-          </select>
         </div>
 
         {/* Tabela */}
@@ -306,9 +342,9 @@ export function TemplatesPage() {
           loading={loading}
           emptyMessage="Nenhum template cadastrado"
           emptyAction={
-            <Button onClick={handleCreate} variant="secondary">
+            <Button onClick={handleCreate}>
               <Plus className="h-4 w-4 mr-2" />
-              Criar primeiro template
+              Criar template
             </Button>
           }
         />
@@ -319,158 +355,164 @@ export function TemplatesPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={selectedTemplate ? 'Editar Template' : 'Novo Template'}
-        size="lg"
+        size="xl"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Tenant *
-              </label>
-              <select
-                value={formData.tenantId}
-                onChange={(e) => setFormData({ ...formData, tenantId: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-                required
-              >
-                <option value="">Selecione...</option>
-                {tenants.map((tenant) => (
-                  <option key={tenant.id} value={tenant.id}>
-                    {tenant.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Tipo de Template *
-              </label>
-              <select
-                value={formData.templateType}
-                onChange={(e) => setFormData({ ...formData, templateType: e.target.value as TemplateType })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-              >
-                {TEMPLATE_TYPE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-              <p className="text-xs text-slate-500 mt-1">
-                {TEMPLATE_TYPE_OPTIONS.find(o => o.value === formData.templateType)?.description}
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
-              label="Nome (identificador)"
+              label="Nome do Template *"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value.toLowerCase().replace(/\s+/g, '_') })}
-              placeholder="assinatura_pendente"
-              hint="Usado internamente para identificação"
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Ex: Notificação de Assinatura Pendente"
               required
             />
-            <Input
-              label="Nome de Exibição"
-              value={formData.displayName}
-              onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-              placeholder="Assinatura Pendente"
-            />
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                Fonte de Dados
+              </label>
+              <select
+                value={formData.dataSourceId || ''}
+                onChange={(e) => setFormData({ ...formData, dataSourceId: e.target.value || null })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+              >
+                <option value="">Nenhuma (usar dados manuais)</option>
+                {dataSources.map((ds) => (
+                  <option key={ds.id} value={ds.id}>
+                    {ds.name} ({ds.apiModule})
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          {/* Campos específicos por tipo */}
-          {formData.templateType === 'meta_template' && (
-            <div className="bg-blue-50 rounded-lg p-4 space-y-4">
-              <p className="text-sm text-blue-800 font-medium">Configuração do Template Meta</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
-                  label="Nome do Template na Meta"
-                  value={formData.metaTemplateName}
-                  onChange={(e) => setFormData({ ...formData, metaTemplateName: e.target.value })}
-                  placeholder="documento_pendente"
-                  required
-                />
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                    Idioma
-                  </label>
-                  <select
-                    value={formData.metaTemplateLanguage}
-                    onChange={(e) => setFormData({ ...formData, metaTemplateLanguage: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-                  >
-                    <option value="pt_BR">Português (Brasil)</option>
-                    <option value="en_US">English (US)</option>
-                    <option value="es">Español</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
+          <Input
+            label="Descrição"
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            placeholder="Descrição opcional do template"
+          />
 
-          {formData.templateType === 'custom_text' && (
-            <div className="bg-purple-50 rounded-lg p-4 space-y-4">
-              <p className="text-sm text-purple-800 font-medium">Mensagem Personalizada</p>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  Corpo da Mensagem *
-                </label>
-                <textarea
-                  value={formData.messageBody}
-                  onChange={(e) => setFormData({ ...formData, messageBody: e.target.value })}
-                  rows={5}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-                  placeholder="Olá {{nome}}, você tem um documento pendente..."
-                  required
-                />
-                <p className="text-xs text-slate-500 mt-1">
-                  Use {'{{campo}}'} para variáveis. Ex: {'{{nome}}'}, {'{{documento}}'}, {'{{link}}'}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {formData.templateType === 'senior_notification' && (
-            <div className="bg-orange-50 rounded-lg p-4 space-y-4">
-              <p className="text-sm text-orange-800 font-medium">Notificação do Senior X</p>
-              <Input
-                label="Endpoint da Notificação"
-                value={formData.seniorNotificationEndpoint}
-                onChange={(e) => setFormData({ ...formData, seniorNotificationEndpoint: e.target.value })}
-                placeholder="/notifications/queries/getTemplate"
-              />
-            </div>
-          )}
-
+          {/* Corpo da Mensagem */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              Mapeamento de Campos (JSON)
+              Corpo da Mensagem *
             </label>
+            <div className="flex flex-wrap gap-1 mb-2">
+              <span className="text-xs text-slate-500 mr-2">Inserir:</span>
+              {COMMON_PLACEHOLDERS.envelope.slice(0, 3).map((p) => (
+                <button
+                  key={p.path}
+                  type="button"
+                  onClick={() => insertPlaceholder(p.path)}
+                  className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                >
+                  {p.label}
+                </button>
+              ))}
+              {COMMON_PLACEHOLDERS.signer.slice(0, 2).map((p) => (
+                <button
+                  key={p.path}
+                  type="button"
+                  onClick={() => insertPlaceholder(p.path)}
+                  className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded hover:bg-green-200"
+                >
+                  {p.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => insertPlaceholder('signUrl')}
+                className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded hover:bg-purple-200"
+              >
+                Link Assinatura
+              </button>
+            </div>
             <textarea
-              value={formData.fieldMapping}
-              onChange={(e) => setFormData({ ...formData, fieldMapping: e.target.value })}
-              rows={4}
+              id="messageBody"
+              value={formData.messageBody}
+              onChange={(e) => setFormData({ ...formData, messageBody: e.target.value })}
+              rows={8}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none font-mono text-sm"
-              placeholder='{"nome": "signerName", "documento": "documentName"}'
+              placeholder="Olá {{signers[0].name}}, você tem um documento pendente..."
+              required
             />
             <p className="text-xs text-slate-500 mt-1">
-              Mapeia variáveis do template para campos da fonte de dados
+              Use {'{{campo}}'} para inserir valores dinâmicos. Ex: {'{{signers[0].name}}'}, {'{{name}}'}, {'{{signUrl}}'}
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="isActive"
-              checked={formData.isActive}
-              onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-              className="h-4 w-4 text-primary focus:ring-primary border-slate-300 rounded"
-            />
-            <label htmlFor="isActive" className="text-sm text-slate-700">
-              Template ativo
-            </label>
+          {/* Configurações de Destinatário */}
+          <div className="bg-slate-50 rounded-lg p-4 space-y-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <Link2 className="h-4 w-4" />
+              Configuração de Destinatário
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Campo do Telefone"
+                value={formData.recipientField}
+                onChange={(e) => setFormData({ ...formData, recipientField: e.target.value })}
+                placeholder="signers[].phoneNumber"
+                hint="Caminho para o número de telefone"
+              />
+
+              <Input
+                label="Campo do Nome (opcional)"
+                value={formData.recipientNameField}
+                onChange={(e) => setFormData({ ...formData, recipientNameField: e.target.value })}
+                placeholder="signers[].name"
+                hint="Para personalização adicional"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Iterar sobre"
+                value={formData.iterateOverField}
+                onChange={(e) => setFormData({ ...formData, iterateOverField: e.target.value })}
+                placeholder="signers"
+                hint="Campo array para enviar múltiplas mensagens"
+              />
+
+              <Input
+                label="Filtro (opcional)"
+                value={formData.filterExpression}
+                onChange={(e) => setFormData({ ...formData, filterExpression: e.target.value })}
+                placeholder="status == 'PENDING'"
+                hint="Expressão para filtrar destinatários"
+              />
+            </div>
+          </div>
+
+          {/* Link de Assinatura */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="signUrlEnabled"
+                checked={formData.signUrlEnabled}
+                onChange={(e) => setFormData({ ...formData, signUrlEnabled: e.target.checked })}
+                className="h-4 w-4 text-primary focus:ring-primary border-slate-300 rounded"
+              />
+              <label htmlFor="signUrlEnabled" className="text-sm text-slate-700">
+                Incluir link de assinatura
+              </label>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="isActive"
+                checked={formData.isActive}
+                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                className="h-4 w-4 text-primary focus:ring-primary border-slate-300 rounded"
+              />
+              <label htmlFor="isActive" className="text-sm text-slate-700">
+                Template ativo
+              </label>
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-4 border-t">
@@ -488,51 +530,100 @@ export function TemplatesPage() {
       <Modal
         isOpen={isPreviewModalOpen}
         onClose={() => setIsPreviewModalOpen(false)}
-        title="Preview do Template"
+        title={`Preview: ${selectedTemplate?.name || ''}`}
+        size="xl"
       >
-        {selectedTemplate && (
-          <div className="space-y-4">
-            <div className="bg-slate-50 rounded-lg p-4">
-              <p className="text-sm font-medium text-slate-700 mb-2">Tipo</p>
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                selectedTemplate.templateType === 'meta_template' 
-                  ? 'bg-blue-100 text-blue-700'
-                  : selectedTemplate.templateType === 'custom_text'
-                  ? 'bg-purple-100 text-purple-700'
-                  : 'bg-orange-100 text-orange-700'
-              }`}>
-                {templateTypeLabels[selectedTemplate.templateType]}
-              </span>
+        <div className="space-y-4">
+          <div className="bg-slate-50 rounded-lg p-4">
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Tenant para preview *
+                </label>
+                <select
+                  value={previewTenantId}
+                  onChange={(e) => setPreviewTenantId(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                >
+                  <option value="">Selecione um tenant...</option>
+                  {tenants.map((tenant) => (
+                    <option key={tenant.id} value={tenant.id}>
+                      {tenant.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Button onClick={handlePreview} loading={previewLoading} disabled={!previewTenantId}>
+                <Eye className="h-4 w-4 mr-2" />
+                Gerar Preview
+              </Button>
             </div>
+          </div>
 
-            {selectedTemplate.messageBody && (
-              <div className="bg-green-50 rounded-lg p-4">
-                <p className="text-sm font-medium text-slate-700 mb-2">Mensagem</p>
-                <div className="bg-white rounded-lg p-3 border border-green-200">
-                  <pre className="text-sm whitespace-pre-wrap text-slate-700">
-                    {selectedTemplate.messageBody}
+          {previewData && (
+            <div className="space-y-4">
+              {/* Template Original */}
+              <div>
+                <h4 className="text-sm font-medium text-slate-700 mb-2">Template Original</h4>
+                <div className="bg-slate-100 rounded-lg p-3">
+                  <pre className="text-sm text-slate-600 whitespace-pre-wrap">{previewData.template}</pre>
+                </div>
+              </div>
+
+              {/* Mensagem Renderizada */}
+              <div>
+                <h4 className="text-sm font-medium text-slate-700 mb-2">Mensagem Renderizada</h4>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <pre className="text-sm text-slate-800 whitespace-pre-wrap">{previewData.rendered}</pre>
+                </div>
+              </div>
+
+              {/* Placeholders Usados */}
+              <div>
+                <h4 className="text-sm font-medium text-slate-700 mb-2">Placeholders</h4>
+                <div className="flex flex-wrap gap-2">
+                  {previewData.placeholders.map((p, i) => (
+                    <span key={i} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
+                      {`{{${p}}}`}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Destinatários */}
+              {previewData.recipients && previewData.recipients.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-slate-700 mb-2">
+                    Destinatários ({previewData.recipients.length})
+                  </h4>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {previewData.recipients.map((r, i) => (
+                      <div key={i} className="bg-slate-50 rounded p-3 text-sm">
+                        <div className="flex items-center gap-4 mb-2">
+                          <span className="font-medium">{r.name || 'Sem nome'}</span>
+                          <span className="text-slate-500">{r.phone || 'Sem telefone'}</span>
+                        </div>
+                        <div className="bg-white border rounded p-2 text-xs text-slate-600">
+                          {r.message.substring(0, 100)}...
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Dados de Amostra */}
+              <div>
+                <h4 className="text-sm font-medium text-slate-700 mb-2">Dados de Amostra (JSON)</h4>
+                <div className="bg-slate-900 rounded-lg p-3">
+                  <pre className="text-slate-300 text-xs overflow-x-auto max-h-48">
+                    {JSON.stringify(previewData.sampleData, null, 2)}
                   </pre>
                 </div>
               </div>
-            )}
-
-            {selectedTemplate.metaTemplateName && (
-              <div className="bg-blue-50 rounded-lg p-4">
-                <p className="text-sm font-medium text-slate-700 mb-2">Template Meta</p>
-                <code className="text-sm bg-white px-2 py-1 rounded border border-blue-200">
-                  {selectedTemplate.metaTemplateName} ({selectedTemplate.metaTemplateLanguage})
-                </code>
-              </div>
-            )}
-
-            <div className="bg-slate-50 rounded-lg p-4">
-              <p className="text-sm font-medium text-slate-700 mb-2">Mapeamento de Campos</p>
-              <pre className="text-xs bg-white p-3 rounded border overflow-auto">
-                {JSON.stringify(selectedTemplate.fieldMapping, null, 2)}
-              </pre>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </Modal>
 
       {/* Modal de Confirmação de Exclusão */}
@@ -548,11 +639,16 @@ export function TemplatesPage() {
             </div>
             <div>
               <p className="text-slate-900 font-medium">
-                Excluir template "{selectedTemplate?.displayName || selectedTemplate?.name}"?
+                Excluir template "{selectedTemplate?.name}"?
               </p>
               <p className="text-sm text-slate-500 mt-1">
-                Esta ação não pode ser desfeita. Jobs que usam este template serão afetados.
+                Esta ação não pode ser desfeita.
               </p>
+              {selectedTemplate?._count && selectedTemplate._count.rules > 0 && (
+                <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-700">
+                  Este template está sendo usado por {selectedTemplate._count.rules} regra(s).
+                </div>
+              )}
             </div>
           </div>
 
@@ -560,7 +656,13 @@ export function TemplatesPage() {
             <Button type="button" variant="secondary" onClick={() => setIsDeleteModalOpen(false)}>
               Cancelar
             </Button>
-            <Button type="button" variant="danger" onClick={handleDeleteConfirm} loading={submitting}>
+            <Button
+              type="button"
+              variant="danger"
+              onClick={handleDeleteConfirm}
+              loading={submitting}
+              disabled={selectedTemplate?._count && selectedTemplate._count.rules > 0}
+            >
               Excluir
             </Button>
           </div>

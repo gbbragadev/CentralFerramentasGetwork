@@ -262,99 +262,209 @@ export async function dataSourcesRoutes(app: FastifyInstance) {
   });
 
   // ========================================
-  // GET /datasources/presets - Presets baseados nas APIs Senior
+  // GET /datasources/presets/list - Presets baseados nas APIs Senior
   // ========================================
   app.get('/presets/list', async () => {
     const presets = [
-      // Sign - Assinaturas
+      // ===== Sign - Assinaturas =====
       {
-        id: 'sign-list-envelopes',
-        name: 'Listar Envelopes de Assinatura',
-        description: 'Lista envelopes pendentes, assinados ou cancelados',
+        id: 'sign-list-envelopes-pending',
+        name: 'Envelopes Pendentes de Assinatura',
+        description: 'Lista envelopes aguardando assinatura - ideal para notificações WhatsApp',
+        category: 'sign',
         apiModule: 'sign',
         apiMethod: 'POST',
         apiEndpoint: 'queries/listEnvelopes',
         apiParams: {
           status: ['PENDING'],
           offset: 0,
-          limit: 50,
+          limit: 100,
         },
         responseDataPath: 'contents',
+        availableFields: [
+          'id', 'name', 'status', 'createdBy', 'createdDate', 'expirationDate',
+          'signers[].name', 'signers[].email', 'signers[].phoneNumber', 'signers[].status',
+          'documents[].id', 'documents[].originalFilename',
+          'totalSigners', 'totalSignersCompleted'
+        ],
+      },
+      {
+        id: 'sign-list-envelopes-all',
+        name: 'Todos os Envelopes',
+        description: 'Lista todos os envelopes independente do status',
+        category: 'sign',
+        apiModule: 'sign',
+        apiMethod: 'POST',
+        apiEndpoint: 'queries/listEnvelopes',
+        apiParams: {
+          offset: 0,
+          limit: 100,
+        },
+        responseDataPath: 'contents',
+        availableFields: [
+          'id', 'name', 'status', 'createdBy', 'createdDate', 'expirationDate',
+          'signers[].name', 'signers[].email', 'signers[].phoneNumber', 'signers[].status',
+          'documents[].id', 'documents[].originalFilename'
+        ],
       },
       {
         id: 'sign-envelope-info',
-        name: 'Informações do Envelope',
-        description: 'Busca detalhes de um envelope específico',
+        name: 'Detalhes do Envelope',
+        description: 'Busca informações completas de um envelope específico',
+        category: 'sign',
         apiModule: 'sign',
         apiMethod: 'POST',
         apiEndpoint: 'queries/getEnvelopeInfo',
         apiParams: {
-          envelopeId: '',
+          envelopeId: '{{envelopeId}}',
         },
-        responseDataPath: '',
+        responseDataPath: 'envelope',
+        availableFields: [
+          'id', 'name', 'status', 'createdBy', 'createdDate', 'instructionsToSigner',
+          'signers[].name', 'signers[].email', 'signers[].phoneNumber',
+          'documents[].id', 'documents[].originalFilename'
+        ],
       },
       {
         id: 'sign-envelope-config',
-        name: 'Configuração do Envelope',
-        description: 'Retorna configurações de um envelope de assinatura',
+        name: 'Configuração para Assinatura',
+        description: 'Dados do envelope para um signatário específico',
+        category: 'sign',
         apiModule: 'sign',
         apiMethod: 'POST',
         apiEndpoint: 'queries/getSignatureEnvelopeConfiguration',
         apiParams: {
-          envelopeId: '',
-          signerEmail: '',
+          envelopeId: '{{envelopeId}}',
+          signerEmail: '{{signerEmail}}',
         },
         responseDataPath: '',
+        availableFields: [
+          'name', 'status', 'createdBy', 'createdDate', 'expirationDate',
+          'instructionsToSigner', 'documents[].originalFilename'
+        ],
       },
-      // ECM/GED - Documentos
+      // ===== ECM/GED - Documentos =====
       {
-        id: 'ged-signed-documents',
-        name: 'Documentos Assinados',
-        description: 'Retorna documentos assinados de um envelope',
+        id: 'ged-sign-urls',
+        name: 'URLs de Assinatura',
+        description: 'Retorna URLs base para requisição de token e assinatura',
+        category: 'ecm_ged',
         apiModule: 'ecm_ged',
         apiMethod: 'POST',
-        apiEndpoint: 'queries/getSignedDocuments',
-        apiParams: {
-          hashEnvelope: '',
-        },
+        apiEndpoint: 'queries/getSignUrls',
+        apiParams: {},
         responseDataPath: '',
+        availableFields: ['requestToken', 'sign'],
       },
       {
         id: 'ged-envelope-status',
-        name: 'Status de Assinatura do Envelope',
-        description: 'Busca dados de assinatura de um envelope',
+        name: 'Status de Assinatura',
+        description: 'Status detalhado dos signatários de um envelope',
+        category: 'ecm_ged',
         apiModule: 'ecm_ged',
         apiMethod: 'POST',
         apiEndpoint: 'queries/getEnvelopeSignStatus',
         apiParams: {
-          envelopeId: '',
+          envelopeId: '{{envelopeId}}',
         },
         responseDataPath: '',
+        availableFields: [
+          'envelopeId', 'status', 'isFinished',
+          'signers[].email', 'signers[].name', 'signers[].status'
+        ],
       },
       {
         id: 'ged-envelope-history',
         name: 'Histórico do Envelope',
-        description: 'Retorna timeline de acontecimentos do envelope',
+        description: 'Timeline de eventos do envelope',
+        category: 'ecm_ged',
         apiModule: 'ecm_ged',
         apiMethod: 'POST',
         apiEndpoint: 'queries/getEnvelopeHistory',
         apiParams: {
-          envelopeId: '',
+          envelopeId: '{{envelopeId}}',
         },
         responseDataPath: 'envelopeTimeline',
+        availableFields: ['action', 'date', 'userName', 'userEmail'],
       },
       {
-        id: 'ged-envelopes-by-status',
-        name: 'Quantidade por Status',
-        description: 'Retorna número de envelopes por status',
+        id: 'ged-signed-documents',
+        name: 'Documentos Assinados',
+        description: 'Documentos finalizados de um envelope',
+        category: 'ecm_ged',
         apiModule: 'ecm_ged',
         apiMethod: 'POST',
-        apiEndpoint: 'queries/getNumberOfEnvelopesByStatus__2',
-        apiParams: {},
-        responseDataPath: '',
+        apiEndpoint: 'queries/getSignedDocuments',
+        apiParams: {
+          hashEnvelope: '{{hashEnvelope}}',
+        },
+        responseDataPath: 'documents',
+        availableFields: ['title', 'url'],
       },
     ];
 
     return success(presets);
+  });
+
+  // ========================================
+  // GET /datasources/modules - Lista módulos disponíveis com defaults
+  // ========================================
+  app.get('/modules', async () => {
+    const modules = [
+      {
+        id: 'sign',
+        name: 'Sign (Assinaturas)',
+        description: 'APIs de assinatura eletrônica e digital',
+        defaultEndpoint: 'queries/listEnvelopes',
+        defaultMethod: 'POST',
+        defaultParams: {
+          status: ['PENDING'],
+          offset: 0,
+          limit: 100,
+        },
+        defaultResponsePath: 'contents',
+        endpoints: [
+          { path: 'queries/listEnvelopes', name: 'Listar Envelopes', method: 'POST' },
+          { path: 'queries/getEnvelopeInfo', name: 'Info do Envelope', method: 'POST' },
+          { path: 'queries/getSignatureEnvelopeConfiguration', name: 'Config para Assinatura', method: 'POST' },
+          { path: 'queries/countListEnvelopes', name: 'Contar Envelopes', method: 'POST' },
+          { path: 'actions/resendRequestSign', name: 'Reenviar Solicitação', method: 'POST' },
+        ],
+      },
+      {
+        id: 'ecm_ged',
+        name: 'ECM/GED (Documentos)',
+        description: 'Gestão eletrônica de documentos',
+        defaultEndpoint: 'queries/getSignUrls',
+        defaultMethod: 'POST',
+        defaultParams: {},
+        defaultResponsePath: '',
+        endpoints: [
+          { path: 'queries/getSignUrls', name: 'URLs de Assinatura', method: 'POST' },
+          { path: 'queries/getEnvelopeSignStatus', name: 'Status do Envelope', method: 'POST' },
+          { path: 'queries/getEnvelopeHistory', name: 'Histórico', method: 'POST' },
+          { path: 'queries/getSignedDocuments', name: 'Docs Assinados', method: 'POST' },
+          { path: 'queries/getEnvelopeSignature', name: 'Dados da Assinatura', method: 'POST' },
+        ],
+      },
+      {
+        id: 'hcm',
+        name: 'HCM (Recursos Humanos)',
+        description: 'APIs de gestão de pessoas',
+        defaultEndpoint: 'queries/listEmployees',
+        defaultMethod: 'POST',
+        defaultParams: {
+          offset: 0,
+          limit: 100,
+        },
+        defaultResponsePath: 'contents',
+        endpoints: [
+          { path: 'queries/listEmployees', name: 'Listar Funcionários', method: 'POST' },
+          { path: 'queries/getEmployee', name: 'Dados do Funcionário', method: 'POST' },
+        ],
+      },
+    ];
+
+    return success(modules);
   });
 }

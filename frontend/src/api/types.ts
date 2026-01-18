@@ -265,7 +265,65 @@ export interface DataSourceTestResult {
 }
 
 // ============================================================================
-// WHATSAPP TEMPLATES (MODELOS DE MENSAGEM)
+// MESSAGE TEMPLATES (TEMPLATES DE MENSAGEM COM PLACEHOLDERS)
+// ============================================================================
+
+export interface MessageTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+
+  // Vínculo com fonte de dados
+  dataSourceId: string | null;
+  dataSource?: DataSource | null;
+
+  // Corpo da mensagem com placeholders
+  messageBody: string;
+
+  // Configuração do destinatário
+  recipientField: string;
+  recipientNameField: string | null;
+
+  // Configuração do link de assinatura
+  signUrlEnabled: boolean;
+  signUrlBaseField: string | null;
+  signUrlTemplate: string | null;
+
+  // Iteração sobre array
+  iterateOverField: string | null;
+  filterExpression: string | null;
+
+  // Status
+  isActive: boolean;
+
+  createdAt: string;
+  updatedAt: string;
+
+  // Contagem de regras usando este template
+  _count?: {
+    rules: number;
+  };
+
+  // Placeholders extraídos (retornado em GET /:id)
+  placeholders?: string[];
+}
+
+export interface MessageTemplatePreview {
+  template: string;
+  rendered: string;
+  placeholders: string[];
+  sampleData: Record<string, unknown>;
+  totalRecords?: number;
+  recipients?: Array<{
+    index: number;
+    phone: string | null;
+    name: string | null;
+    message: string;
+  }>;
+}
+
+// ============================================================================
+// WHATSAPP TEMPLATES (MODELOS DE MENSAGEM) - LEGACY
 // ============================================================================
 
 export type TemplateType = 'meta_template' | 'custom_text' | 'senior_notification';

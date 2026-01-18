@@ -1,0 +1,1349 @@
+ (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
+diff --git a/api/src/routes/auth.ts b/api/src/routes/auth.ts
+index e987eb93809a121567d9fee4552776685bfeaf6c..a277d448078b798cc9954adeb7113ac67bfed3f1 100644
+--- a/api/src/routes/auth.ts
++++ b/api/src/routes/auth.ts
+@@ -1,41 +1,81 @@
+ // ============================================================
+ // Auth Routes
+ // ============================================================
+ 
+ import { FastifyInstance } from 'fastify';
+ import { z } from 'zod';
+ import bcrypt from 'bcryptjs';
+ import { prisma } from '../index.js';
+ import { success, invalidCredentials, send401, send404, ErrorCodes, apiError } from '../lib/response.js';
+ 
+ const loginSchema = z.object({
+   email: z.string().email('Email inválido'),
+   password: z.string().min(1, 'Senha obrigatória'),
+ });
+ 
++const registerSchema = z.object({
++  name: z.string().min(2, 'Nome obrigatório'),
++  email: z.string().email('Email inválido'),
++  password: z.string().min(8, 'A senha deve ter pelo menos 8 caracteres'),
++});
++
+ export async function authRoutes(app: FastifyInstance) {
++  // POST /auth/register
++  app.post('/register', async (request, reply) => {
++    const body = registerSchema.parse(request.body);
++
++    const normalizedEmail = body.email.toLowerCase();
++    const existingUser = await prisma.user.findUnique({
++      where: { email: normalizedEmail },
++    });
++
++    if (existingUser) {
++      return reply.status(409).send(apiError(ErrorCodes.ALREADY_EXISTS, 'Email já cadastrado'));
++    }
++
++    const hashedPassword = await bcrypt.hash(body.password, 10);
++    const user = await prisma.user.create({
++      data: {
++        name: body.name,
++        email: normalizedEmail,
++        password: hashedPassword,
++      },
++    });
++
++    return reply.status(201).send(
++      success({
++        id: user.id,
++        email: user.email,
++        name: user.name,
++        role: user.role,
++        active: user.active,
++        createdAt: user.createdAt,
++      })
++    );
++  });
++
+   // POST /auth/login
+   app.post('/login', async (request, reply) => {
+     const body = loginSchema.parse(request.body);
+ 
+     const user = await prisma.user.findUnique({
+       where: { email: body.email },
+     });
+ 
+     if (!user || !user.active) {
+       return reply.status(401).send(invalidCredentials());
+     }
+ 
+     const validPassword = await bcrypt.compare(body.password, user.password);
+     if (!validPassword) {
+       return reply.status(401).send(invalidCredentials());
+     }
+ 
+     const token = app.jwt.sign(
+       {
+         userId: user.id,
+         email: user.email,
+         role: user.role,
+       },
+       { expiresIn: '24h' }
+     );
+diff --git a/api/src/routes/products.ts b/api/src/routes/products.ts
+index 11494feb1e4caabdbf1fe9f0ff52ac8ad9acc198..8383a44a9af4e4fe2fc2fd41cf96210c077fa1f1 100644
+--- a/api/src/routes/products.ts
++++ b/api/src/routes/products.ts
+@@ -1,43 +1,114 @@
+-// ============================================================
+-// Products Routes (Placeholder)
+-// ============================================================
+-// Este endpoint é um placeholder para a funcionalidade de produtos
+-// que será implementada futuramente.
+-
+ import { FastifyInstance } from 'fastify';
+-import { success } from '../lib/response.js';
++import { z } from 'zod';
++import { prisma } from '../index.js';
++import { success, send404, apiError, ErrorCodes } from '../lib/response.js';
++
++const productCreateSchema = z.object({
++  code: z
++    .string()
++    .min(2, 'Código obrigatório')
++    .regex(/^[A-Z][A-Z0-9_]*$/, 'Código inválido'),
++  name: z.string().min(2, 'Nome obrigatório'),
++  description: z.string().optional(),
++  icon: z.string().optional(),
++  isActive: z.boolean().optional().default(true),
++});
++
++const productUpdateSchema = productCreateSchema
++  .omit({ code: true })
++  .partial();
+ 
+ export async function productsRoutes(app: FastifyInstance) {
+   // Middleware de autenticação
+   app.addHook('preHandler', app.authenticate as any);
+ 
+   // GET /products - Listar todos os produtos
+   app.get('/', async () => {
+-    // TODO: Implementar quando a tabela de produtos existir
+-    return success([]);
++    const products = await prisma.product.findMany({
++      orderBy: { createdAt: 'desc' },
++    });
++    return success(products);
+   });
+ 
+   // GET /products/:id - Buscar produto por ID
+   app.get('/:id', async (request, reply) => {
+     const { id } = request.params as { id: string };
+     
+-    // TODO: Implementar quando a tabela de produtos existir
+-    return reply.status(404).send({
+-      error: {
+-        code: 'NOT_FOUND',
+-        message: 'Produto não encontrado',
+-      },
++    const product = await prisma.product.findUnique({
++      where: { id },
+     });
++
++    if (!product) {
++      return send404(reply, 'Produto');
++    }
++
++    return success(product);
+   });
+ 
+   // POST /products - Criar produto
+   app.post('/', async (request, reply) => {
+-    // TODO: Implementar quando a tabela de produtos existir
+-    return reply.status(501).send({
+-      error: {
+-        code: 'NOT_IMPLEMENTED',
+-        message: 'Funcionalidade de produtos ainda não implementada',
++    const body = productCreateSchema.parse(request.body);
++
++    const existingProduct = await prisma.product.findUnique({
++      where: { code: body.code },
++    });
++
++    if (existingProduct) {
++      return reply.status(409).send(apiError(ErrorCodes.CONFLICT, 'Código já cadastrado'));
++    }
++
++    const product = await prisma.product.create({
++      data: {
++        code: body.code,
++        name: body.name,
++        description: body.description?.trim() || null,
++        icon: body.icon?.trim() || null,
++        isActive: body.isActive ?? true,
+       },
+     });
++
++    return reply.status(201).send(success(product));
++  });
++
++  // PUT /products/:id - Atualizar produto
++  app.put('/:id', async (request, reply) => {
++    const { id } = request.params as { id: string };
++    const body = productUpdateSchema.parse(request.body);
++
++    const existingProduct = await prisma.product.findUnique({
++      where: { id },
++    });
++
++    if (!existingProduct) {
++      return send404(reply, 'Produto');
++    }
++
++    const product = await prisma.product.update({
++      where: { id },
++      data: {
++        name: body.name ?? existingProduct.name,
++        description: body.description?.trim() ?? existingProduct.description,
++        icon: body.icon?.trim() ?? existingProduct.icon,
++        isActive: body.isActive ?? existingProduct.isActive,
++      },
++    });
++
++    return success(product);
++  });
++
++  // DELETE /products/:id - Remover produto
++  app.delete('/:id', async (request, reply) => {
++    const { id } = request.params as { id: string };
++
++    const existingProduct = await prisma.product.findUnique({
++      where: { id },
++    });
++
++    if (!existingProduct) {
++      return send404(reply, 'Produto');
++    }
++
++    await prisma.product.delete({ where: { id } });
++    return reply.status(204).send();
+   });
+ }
+diff --git a/frontend/public/forbiz-logo.jpg b/frontend/public/forbiz-logo.jpg
+new file mode 100644
+index 0000000000000000000000000000000000000000..dcd68d9f51e05e9eb148bfbe9c0d6766c1f9eea3
+GIT binary patch
+literal 9222
+zcmb7IWmsIxmTjbQcX!ur2<}dBcX!v|5+Jw*cM{wsxI4jvy99T)Ab~KQd*8hIJ^R$J
+zv-|W{wQB9P<!$+G3xFXf{azXX1qA>=K_0-{8bAU70}cImK@1kMfCxY!EG!TS9v%(>
+z1qlTO83`E~6%7jm6%7*&85si)0}~qu7Z(==9iIRXhX4x)7w7MvK*2!1fdwK0frvP$
+z$f!8~Z+q(pU?KoU03$F^Q~+p9C>Ttrw?P02000dGfPw7vzXk;j*&`f00>n!M1#v;_
+zzdp#R{_(!80#G0yL1VyRKwe!LX71j71sAMyYn+sL@U^cK>GlZgH;(Nc+lx<mW0g>r
+zbk1sy?B;S|N7ryE(HMjR*F6%Z-aGUaX_RuQSHJ%;F0IJPUZr%Ht1&|T4vb>^%>=<D
+z2!_NtoOq3?=`_tq0)ZxxNKQ3XF+P7{-!M+<J&Ix-I0|HoLIADH&YoRSNl;LXGiO4#
+zMzv;(V$wGPfPoE%CP0AQ8l}^wut`8jm?fA70Qx|X&HiIs%UKTgZ4a-x4U>2N*mP5c
+zO~aG^bMSNO#&mw#`0I>5GWd7a$uX%XMm;}vdwvl8<`J0t@yR*kRU&?q>)yyd?0g$m
+zqn=_95CpUNNcL&i?Oyv{WYnNo+3sE`?C?4;d)ePS3EltZi%3Y;ug_vvlhtXRhXRLd
+z{Cuw+MIO02=QF%c<BI~`tFgKqbwq&9-hXz5wmml*P-3Xcbe?03#<h0s(WmWLSS4-D
+zI>->$r>JQ{ZS&=2>+dfS;6k}+vftA)6lF)psz)y9suq+|VESbRkn{rH1?LgaWW39g
+z<5Y{r#tNO^C1lDWtuaNQ)l8ym1CtuWiUNYfHRhs8cD}=<%vFrUm)-D|<aeM3BhEQ2
+z_>?rPpx`siEDg!AV45t@Wr?Hevf(p3F-6hb${YC<CyU2X>g=4X$XVj*m^asd3Jln?
+zPiiFj0hidqpyio|s})k#i^~*D<Q7y`#pmZ7q%j-9mO!lxVG;y-C}<!wgu>AOAsd7}
+ze|d(9MG22V1;z$(h>GD;aEs%-!^PvGhVTmkLOUoRv?&#hO$g^UNa&hKVhwmrL?jL)
+zXKNRIfV;!Tx0M5ENatbJMJ%PG4?nb&3|qYI@FYs}i4Q`<9&<UdP)5W|`uVgnTs~<;
+z{zos~y(ogfq61lXsGuq3C=Q(sDCteVn={A_wjHyV%P>ukx$)zv7U((S*OH~?*ArF!
+zBB-41cD@Jin8(M}r59fn!OMd<+GR(BFQJRf%y7}o=XoPNwNc#B^d}LWw)AmoUOP}P
+zfr8%Ftq&RDb?-HzO28xTEB264>a*MM>Jna+Phh(3{4A)U+@#BYcO|yWRgkkRxqYgM
+znt9hmsO|FNJljZU3jdf@%%FMR-pVS<S!o>`CbS`od2#Ty4U2?FIto4vmmr~rS;=?R
+z11*NAN99>nOY=8dp;KS}OrdrK4{8V4QE|j&HeV&_SzTQlwTo;m`-WHMbuDDRcHSOe
+zN;oiGH4knr4Y{%jUP-ewZ;{t)0D&dO-H^5V$4?TaGSM)x?b3bi0H#9y_RI2Zg~nFL
+zCu=;BOSyR_RZ^-Mi)p5NoBOsm0CnicjjqZCMu9I*o@Rlp)kLH}Ecn0IaNBK_azxm>
+zG~DPH>}59B>aT{eyG}paK54!xR!$gj!3{>3xvbqxvV8oxeP6;@pRUQh)5e6$B)Cud
+zM~Y}GH&3`w<+Emv#!1cso%xBOyOeY}msUoRmQ|U%W{ZZMYk9h&Tc&d9#5{w$)l=K*
+z$^L*&WxdQx99*fUhtW3HL-7DB@S$m9z_3!oF7e6IdV&WzXC$?xoBTJd80o?{jhDw<
+zzteuo0Fxn~R-;FCu3;%n!plP`U0vN@Pb#Y<JL}|*;o*lSXNha8UV4TZ35HOsH!{xV
+z<^JjE)jvOdbKl`n&ysPbXNV1GJAC%Vrpy>`pUgj%Xi38KahuPYzAeTKs~-`y(-VZp
+z57AE`ZG}g;>lrzp*d;5H#!HgPmx$UfkQ-&3qQ#4i%ekp1tNVp!EZF~=H?a61G27&r
+z{8b!f-OCe+p1PqpcUx!>_Cp!J@KiXb?sO&s-+pIZGpNP9F7)h><!W{Q=i~C3^ihkP
+zwT381U0!gDpebqAOa}=mc76EbpnH>bdHE#6z2t};M%p>XHbVRduC$sl7Ii{SsOt|&
+z%T`oV#*m1l#RNb@3<?&a@c+oqUv0;Pp~M1XU{g?uQG;AXP5%i)h+hQCmd8A%19y!U
+zQ#?uh4e&|Bl~;}8>vHP(Q^-zvz4pk_so4`N%5KNQ@^6|puca)~-+P-gOV8IkF@vQ;
+zBWCI&bF<>{Ealg8(t@trlX9awvF;3PQ6|G`3o3QBQd1Wbs^623QjLde?SDLK;9HS&
+z=TyJuT#E_g$*`L3lAWc=j?=i&zLI&fscF|KUv+vk%nxqm*A;)nihiJ5lA+VLrqdVT
+zUp~Fpj*-{mdS<94iXS5l45fESa+au=Zj4gDwb}a;&Ql?Cw{PaLV@yLOA4qsdTX&p0
+z-BQ5e*f=tJ!%&n;*^SZ22?2%<697rJkOlJ}SRi>E0t^=AUtq+j{sN==FEY@7ks-hc
+z9;8O#Gv+h4!DTvDqVCVw|5;6U`gw<U6W>f=8<oOwi6g?BynEy&I@N$FZ3FRMo-u?&
+zj;&HQrh%zg#@JkePSd?CJ-1}hzlD=wUdUdMsisnS%wf1Ppo{%O=dot-yaUiuJJI)D
+zN%iDB-JFYg`PA%D=jt4RRQFLiuXwJ?%?n*Jp;~EckY^RrG;Y4$LUB*D#&uHg<BdkX
+z2$ZC_Efk^*Et;tez*<n8Z_8I1m3NDsA%`-dF`grbLXH)4@IVgwP)zJ2<m|$KWf~S5
+z4jvW(?%(78Bh#1=R$x<!shYY1F+d!_iFG)l;%XG{%-q~R)X(5j=l9KSb0!u1N3`KY
+zpzEaRkjPUz@JKY-e&(!x3RyXbfq7rNbW!!pdKe@sL5Lnjbkn|gtNl&Xo2oX@uGkJ+
+zF{m;{w6M)`LDOJrn(az+w4<fcOO>26IdUpw_jJLq13w7{l=b}SmuIy}@B{^S#X+TJ
+zR@Y*&O${!g)%7!L|CXb=acIpIt;%f9jO`@_hA`4Ef#(WOKy6D|+Fn!nRy@*Ne1L%f
+zb*G_bx2z_XTOCsyj@Uu@LHVo7Ah)Jbjh3dSn07<^4kp#G8{U-LWDc&rxO@AhdQwM4
+z1M^3&RNU&dfV^N)?>v@us?^ON`gKhm`aT{m1_6uTwSsO*b$<_&dp8?BktR?Lgqi}B
+zk}6M=HlJTp7{EIN(Po?kpqVgwbUd=#4Xc){&N~#pZ&?&{`EkS@b-JD@i{Ro**F2lm
+zjKhiE@Es-{dy6R>RDb%FI@A48ZY9GB3mIs8jMec|td9>~k0nDHC{eIkwiH=G-X-sQ
+z-3c*!vj)dTlWx%?FfXk@rq~K^fZ5=8qnTFqoUo!KhWd}})p9-^zZB9lqR^<nOn5{X
+zz5!0_j>!j{D>5>YkA+|xj>E}v&x^x*G189_YwcnQNJwM5e=;aa*v#6X^zH1X|1z4l
+zHusaV|4hWG{=NExEEjoH{THTM8&?Z_zNTe|ugC=j!vusVGl>j~*NjQ7Buk2tezG<z
+z3S*xho$nOV6Edgq<hUuT#Ah}I((5Mp=CHv!%idSZiE^!9f$R_D&l)ZJ5hre8?Ce||
+z?+Xc06G`{54}6vEXa>hSmJ9HW&4~&W75HmCCCsI_m+wArw=5|21&e^;u;p!rBq>l;
+z8XLf0$!Hm)sVmfrz~Ms{)NGdxH>r8Q@RN-mso}G%uL<H}ND~^d>VI5-hk0BD)!zVY
+zmnsF{gNP1<Nx+!#q+8juH;z@F1GDq~4(mP)BH?cUDI^i;{!HqX)d4J^%-|`*`LP-)
+ziCiwF2p8+F9^=PW2*$-dEF$X3zDky@C1x!+bcew`ZPJuSkFn{N`Qn3X=z?>Ee1Kl}
+z@1g>J1fP?lDfuZ1E2aZ9-j}DF$6<G#s8=d8l1@`OJ1r=(Fukl&YL;ZjA6@fwm~mn`
+zW9+1Dl{-3w-W?Fsku65or!ACy+Y0ThqtYV(0n5wXGMS^An`WNhR@Csmu+odZF&(-u
+zYG5TS{3V6g{o2fCvcYt#7oCi;HYGpDiBeW0Qonl)=WH508N1y-W(Skonu-R?JBbnw
+zL-Y={iGjyW87=xs_h(gyhtG<H5RGB6xraplR!gg>X{f=nw-{QKLFOmz{W4X;vtN|?
+z!IL#e?~wMt)B=k!)(nI8Ay6ht5g`q@gTi@3;Jhwg3-UW;LK{_*v)h)L_>ni!(XiuL
+zjXZ)c)me=-6m&!*BtG!KWm(-^s^v@gBRJcGtgoSReWra_WxWBQk@8x1{3p8Bci*5y
+zSC<^UQ2#ttxwQCBkbC{ybL>;!sKS%Wmfn|B-*B*9@_(q%xOq@Ms??*><I-bN6-EgA
+z6=CaEgZDu<%=dm7s~kfmF6Ke{o)+rbs*Tyx|GB&g*W>4nj0U!1zJ^7Ga~sdjLA8@T
+zDmQK?^YW!c*k{XuiqLK1g{D-2(#q&!H=wRvp}eEyV@VQB#F+L6RSW;cF0n_SSCS*1
+zs{W23<lpzMOyT=j?#pFv`ZEiEtbeo_Q*<Kj_;!iot_J_ylb(`tc*sAzgD$8b$TmV+
+z5H;`nPQn~bX3xeHtaq*<*?M$@X8&<R8$RnIluUFilWw69*-3kh8x|O~vH;OxMhuAV
+zLjBV){wF&_0Wc}SVyYOXuEB{{6!~?1pqcG!(f_TJMJV~Ff9hl~u26*`ROj77g*3yn
+zvT^e+e)fqLJ*%Kl+0%c{uF3%Y+4ULV=-8<B24pS5jfQ~^vXXUj<8S&k9k|0Ynp2Gh
+z6;IYJ)j9!PGCHXmTe?AW8^n>|HoL(w_6Ei<`;dn)yp5l<wYq_Hlz6t&Zvb_@(UVx*
+zn7N)z8?MJc<}`<4MrHm#4I{=Qb5S|s2y{q`VXS%(b;5{pz@*`mof#%g_DVvfZs{)R
+zDaW^iKUvOr>D;uoCN71x=5+#gbGSDqMhmAn%BVkmn43BR^3R~s6*=~RKem;zoez7f
+zPjhX3Jag^i+<*F&`FvPZg0$Y1$XuVx9A!R&f26qni@Ytdb0EV}M%?m@wB=9XYJ@T!
+zW#i-mm$`JV@NrSQ(dTKjvfPcY^J2D}vAwW7*K8vcXz`Rbi!G6j8SBofs^iAT&@8Mr
+zs1&@Y3<q_chXGNgfa();L}O0VQW6=~A-eQ2w7H9uQ?%5jW+Gu)7j@emwJZ@%d`kLd
+zISJ|xT^pFO$6qm(%D_OX_K^<9dav4OTIZsnHs1-cH1!=T3a_#o7Yru*+4kkTn#`%>
+zwuyTfVUtAX%EQPbIlXJ-!a{qG_?RVQ<@DKne%sl6oF)R87oP^nNXcEJA*50nGTD`3
+z1RJH1rTAO|fgirwdZ)$%PGw$p#>-z2Z5q1~Kg?q~bF^!etF<rP2<v;TYQf%8PL!(^
+zf2ghKiF8i_>roZUrM>}@isg>lw3=9}RM+w|eK8nVc?1;isLLM$n?AR;;&1$s5!4Il
+zX18vD2B9|bLjh{5n773RcvdQXbj_g^HE{92-2pwx)a&qIgTe>sn3qk-V}LA9n2Key
+z(Bt=m`Tb%@1yxSudd14Y`v?Nut4cv5!y9V6@-b6Zbe7lemYf@AU7l#@pVnkeh!)B}
+z2z<6oyD8xT{$}awV(F^$P&Y(Q;T9nFy%Vc+2>bD15$=xeIWEeh)%F#6JfDWr2pIr6
+zp@@k${r&WT_Bswdcv(2+IS@W&YKOSASLlG-_qm2OObxkx5{;=VV+&W|Q@01ln94Wi
+z;YtSrG+kqb9Z5xa>rVIqm>-@G@Z0>9-q>jJEMKJ2IFf{&e#cw)-yF$uF2=ntU;b^L
+z8R+Mg<-?P%QW7Ubmd<88ix-rZUlNY2H-fAJhhjqtkCf^ek1csNx!5f&Jky*N72In>
+zMr8>NXJH_Wkdc?RJwCfxv@=Cv)|5ZKXd~sxY%^*w4oK0RSeAo<8i)`TQX7O<tj95^
+zXU<^Z4&o9RXXKJo5!#(UK;*)r;ddDfD#F6<#o8a@`be2n0;Lekg?E~;qjK+n?vVy3
+z(`u^lU4ym!33tbGVe>LNi$PQ9=7)u5*pt+k=9_N=$sYaIm^kVYEW50|QWF_=T_IXD
+zwgE^!Mw^66s7So{qCCsC(EHvvqnaj7uis<AW#L~(KT6%Txta|Dz3kTYlvPpD54zLY
+z40IZprOouZVg@xc*)W5@FpRzviGMa|bK4(}VH$UF2cj;ldAClDv#HK2+#as-jXP6z
+zPCt7-Ul_F3UzjYd2IPpgw+EKU^_7`Kr`j8QV}G~uGE`pusU3E<^uzS?Wev2XM#|NY
+zfv&-hpeq~8`sMZQ1QJ={JqUK7i}{u<RaN600|RJC+6^iYR@$3B!M`)GT*`3tPDN9?
+zE`e4Jdl-sCc^C|cD7pzKTz`lxpPUni(qA(l%Jv#RXCaVecK%x4&xK}Qw_(t?<{cg}
+zJz$hBeDr0ym$+A{c>+dfYmll#VY)CKtC{8Zfeb%aC019{N_4pBocJYcjN-jT+Nb7J
+zYVSPu;nx^P0r(=qbN#1ypM90x!zWb!iuCCpoLu3n{-tynx@Wq6qOJIA&*|_%U&ARb
+z*>*`zs$YAS2^e(F<`En-kcLpS_d`s>$%Sp1>%X(Y5Gq_gM5n||Jz%{W@7V32ko+<r
+z2|$q_(-&XM9ZzA#YaAj|!YY9k=?9VqMdVvg=~|?Q=f7(|GTYXf)`aWBH)udCz6LqH
+z0rG>rUkmhsNwIdhag(#@)Jpc`>)HgB%a1ZPIm;vOgzdDTQWs|1DfDB?^a%`0C=PWM
+zCAeNQ7N-x<+i-K|%~Z{sNyZdbzOMp(Z)$V5dOo6iBTevco-jMP>im`t>faZ^xY8B=
+z>=Ufn+*n_bA(Nti<Z_^I_|CS-%PuzF>oBS?K5vf-rVpiA&#DxXiT;@g0{*rQ7+iWM
+zEz6%DJtI&hJ8En~14P6>Y^?V<$%xb<-w$k0I`35XLCVm-54&Zu$Isf|m)*BV{1<MF
+zSYf1ROWh<}T2OrUk-Z-v?>o(O6pPTkF1ufKyRGZ*r#4G1c*CXcYv^&&?qPl3=R_Iw
+zwnww+=Sd{_ZwCB+5Jsb?40r>W|Ngg=gZVpl0{-6!6Y6gk#eg(2SHX#pBuX)}{ofuJ
+zBe|;TV<DoBpAR=EUYYF>9JMHLIxo5CYk$N=#i^qgl~DcV4Ipm&uJxWOyhxJJ<oW6F
+zghL?m`uq(bAGS0`yG*Kjazt$}#v<Y@6xyKZZIB*Pnv82}emca7H;xfy!#moX0b&H{
+zaC@*LR9GT*i5D}<52bW6_hW@IdT;LI6uL~T%{<^1j@bJ<D4rvyJG+aN4<<a<+s~dc
+z+^w-~cS{Ip1RxSSCFyzrH>W9i3)vDk>qG2hhf=CG`S6>I>}e{5q3s0u+z2bC?32&L
+z^HYz%?Ubd}Ti%a4GcKvZzb1A_7dg~abyvkzQpquLi0oj5Vqr|@bMYKL3bc&eZ}ZYn
+zQo_<qJL+St%jK?X`RLMlQz5uE6bum8$kcJg@8aq_VFL`MK0)t&lFY$|`X<y2FBo3O
+zg{7&={#Ec~$m1!Ip&VWL{o&E5dEm~5vD<)}xZ`qhg!0V#y-FJqUZreY36ky}je1$m
+zj(ob$vp@p<6;mJNp6D?l)z05?2QrKJx99%1+M!T2#eiH?e%%bHZ~OY6i~8GgV<@Jh
+znH)X60j!{SZc4$#q*R6bQ0`#2LFTdr%KCWPXG)!CNtCM13*ZUslX!by2&NA0HP`Gf
+zQ3fw$%1rxKgC>nqjs|BbY24ZTIR03)pV72($CkwLmU5{tTt{F4>X#WB5PXzRZzWJ;
+zI2x}C=^J^qJDJTMGbOa2_ESobri+#-{mF;Vcm+LJ`L@KgQ2@`5k1AO)YK2$SR))WO
+zkKw7^R%4lOS(ps<wyv@CHshp`J#5tnfI4z_a=aNh;tLq99tJuCWH%uvA@H4CGp>G8
+z>3D{{dTS(h;8F~T5SyAx-t2uEq@ey4WDM2^+qknC%7<bZ=op}kg@6S!;_R|}8Uf4)
+z1#4<M*-w9@*B6BfwpG|{>QJcoeEt**fR_o%FH8~+G<G}nC+ay^sQ1d&ryw{p{H-b>
+zIRBl&{##Z;!T|uODotH6{)WR9Mc>Re=wF~A!&eaumGgJ?aGHF4L)O1GqGJ;$Fx>^}
+zBc#}2lVs^uB6GK%5Q*W+JXpRw8!$TnKWKL!u65(1dU`&Dk^3XK=TlE$eizr$626An
+z7a^!B>|@f&Z(P|8Qrg#(yvP+3rWuhfz?FQjl*noP%N!kleDw|BYGe;PXrWgm0pn*t
+zsR)DIW_>>?eszGJ&dY8#K~}KmH}5^j)au~>WBk%PoK~gRQ?{XT+go&**z(Z%brR_5
+zs1zZ3{08W^Q4q7!H{`n773_7I_4T@Z1FQ#Ar8`{Gof*wMj(Z4SNwP9aZF(RIDruJJ
+z)x7}(rloWfFgL<qa!TI-2(HLXqC5(iiyu)w?9R~bp;1KCTJ@vB1qEHj<GW6ga^SI*
+zO5~X7Tz+TVs2BV-WYRlqw`Uek6Olv4@215Phf@GMf?aIr)bvhmcQ!A8;W{iWQg8rt
+z=VvifCvYC;|CzU1QQPGr`_~&lp}Pl`FFsdj{o@6P>G4H`_4A^xF&I51@O5&w0|9=*
+zeUrj0IJAAjD}5JEdFh;wmn><WVjUZ05V+vBH_^TVe1HnU<{Q?A{?qPf@h8xe1|-<f
+z_T6LhbIKL_dP4tc-G%L4L^E_K8p*>4E%w0+S2bkQe6jOHeT7pSvX*;Z4@p|*{y*{l
+zjviy4%_6r530inUR!IfV!wIHEa&Lfvwm(}UXy6cH<-TA-G5_?~$Rf&n{+IE@V5H42
+z863%0A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
+
+literal 0
+HcmV?d00001
+
+diff --git a/frontend/public/getwork-logo.jpg b/frontend/public/getwork-logo.jpg
+new file mode 100644
+index 0000000000000000000000000000000000000000..641d56fa99406ea6f4a6c20fe02e2e748c025fc7
+GIT binary patch
+literal 5409
+zcmb7HWk6J2w>~q>z)&&+3^*v=J;cx<h=g<tsFbAA0s^9dN)3o0jY>+x2r4ZhF-Uhv
+zBP}6~<Q?Aoz4zX~cb)TN?O1z1>+H3jz0Sqh#Vi27t*W64fIt8MB0Rvw1aK1|0)sDK
+zf<Oo_6b6MtAW$+A5@Hwy83hG7896!S6>2!;6~q;CayT6vK|_l~A}OfouhP+8rKUyF
+zUM>P6BG^Enq);d+EhRZ6?f+XYz5@st&<?Z{f!F{r0z`xWU9<q#2_V5lpi8{}3ZV%l
+zCV{{Rqt^%nAb>FZ?-;==Fu?<2l8c`J1rfm%P6Q|P?KEvZZY0d1zuF?A1aO1A@6>dd
+zX$BE`#IUVm3GqF8W`%U7ya|GZK(&PdyEp)#6vB<u5Q&_P0NAi_g3p1PFqu4D2Q&W2
+z%B&;j9>ekjdP5#^{+gl)!Xj1O0s!h$fr~vTjjy63qNB(86Q_XLoutxrg{!}I%{=$^
+zdNm_QUF#VG)tVi=_m}&3Yiia<S>13uD3AR|KJVVX?^%9${benqbf)jf{NE*iMrICP
+ziuqsFOV6I)=xrbF{N*~IZ877n^W1Dnp4o8dgunV+;%qs4CwgoAN4iFOs^d0Jt+waj
+z`2D?8*SCDnHO|eZTmvU#OglVp4Am5jT2R$0_v-ffPHWPKtup!EsvL?UDR3?xp$laV
+zVok_;0|0cU-pUZcd<S|{eK<hTW0XU1m(*UuSQ#+8Q;W3!m>jW`WzUfT0FW%f{M!<R
+zIoaR`bW24QG@livd2Rpzbf}|~mpa(q*|;nO)t!(E0|-K_JjU<_l_4l#bo;UiJSUu(
+z0O2^GgdhV!z(oIaUY-~PN`#;$hNEd%L_}FhXpwAmH#s=P2}cMcoGb_mUg8*IIEhfb
+zIcL=|dC-WOc^SiE=W40FEiy=Wf)4}oV)|_C1>#UqF##zQo0Reqvdq+m;qBoJQAe<K
+z+Pl-LTp|jzp43{cak0r=ZK^V%iiX5kU-q%nKfkP;8~pgbx0DV&rKideYoH3k#f|e;
+z>Hj(QiM{(6uZ6PseEi+;jX^EkQdR}el?997SRI|nEzmH68kT<K7|4i!aev{H<E6>V
+z+_~H9JIFs4=nEj?*Mg{0_el54V0m6UuFuP_&hJsu@EW{#p=8xS_?xKSkIIdY3(p!<
+z9=-prDBEs@q`0WHHjtF{`gpNnHL-{P?c3&2rSWl*ZpxIub1~vkQFlgN9KQ?+WiX36
+ztXQ0_-N75=RPJ93EHS?_IpECp3yn(ii#DTfJ;nZjRZU42yrn-HD|jN+*6+=STb+|B
+zy`6y7`Iul7vy)JN0cd9_WD6DY2TB<mS78H86jyg8F@+6JJh%(JnHQXXY^~@dq(+xu
+zz7~+05w~5>=i$z(#xE-xccsSbiKJGa8ant7{|^0=8odDih_NUzDNC(a=6tD=@FZ!_
+zu#}r0|B!y2LH!~9)=w^{@2o4ut0qZFB?8+^IlipS<<AXvXdGx)O3uKJ1La+EZ*u#Y
+z)-aYfdg89?WX30QF*?KVdmrcUnz@_>#EyBB=%Hplx9`nqK=}m+ckWB6m&!{eZBKaW
+ziBHtUdL&f6U3@l`Q%g03*J>k1iv-meP^vz~&b7C8`7LQoMwK*bh+U0^@=e;C$p5%W
+zjzzgeL_r5`vg_?F9O}B-%Y@2=iptl;=orYN67O=D(l@_*-8^SCU^l5wTzVO)JO}_p
+zL<mjj|BwrTP7nlgp=Q;G(}-AE)3S&vXO;aEr34021g-NICg5B(Rclu0+3K(9COZ*T
+z%M>}ZJB4>~N$43N<Nt(Y<R2J$p+~}~5^j!KrLAn_;>7Eiaq0YI)djwfk7LG>>^O=J
+zqYP^%;YuphWA^q03u13ydvD#I^kF-zPOdkD90!&JWE_{sF1h+Y33N&2U<8~RO~fif
+z!*WAkRH^?TRNzZg_}&O<hc6D1+nVDW_qjMJRZk2MUdq)Cx9*b$h3?On$boBIk1}AK
+zk9+4oh4X#)<^AbPJ05+)N+tOy_C;!sbr@koS@<QbLP<anV)Fmqlh6bp2x=Nuv<MW=
+zBC4cs%|^@a8BC14Vd$~VA*OuOz$PR%v+2)&a+p{V+*1&R{<Z$B>2<Y{^t6}UlHb%c
+znl}20NMw}Pnk_|P)ET>0s{LUU@rJKYyY!ufx#qh#Y46#LLGGSF;&;A1Sj+Fp8MIN<
+zCUgB@!Q%m0jsc-*T9e?%EzD@8A=iQdbn`Q*wyRqigWkmN#HV||vlX_gskAD?74+Q8
+z%kpD<Bl-pl!qhDElCIkcaI8L^)xf&S^89qtciOP|8|sLkmMUTs{$O7m_{;eVn{{gk
+z|8KT3Phk=vCZ}nHAFma!5|BhwFjy>f-&)d*-RL_Pmz|~-4#-wdNpY$v6XKhX49X!%
+zweKWRyKel(X1`4kjq&(uj@WP!d(yo)tkgE@tn#I0f>e`pC<l9E&AM&OiK5b4A#qTN
+zvRez|Iq@#j8KidX9V18aHnPKAi+4G}uB@x7d^m1KpWIo`U{rKgZUui}2>LD2!9)hz
+ziXx3D$@=!;xR2C&<o5Sxwy@`R9bGubnw{@k<UR&5-^<G1N-X^HtYlli9c(o>+NIsu
+ziF4Fqvo4S8jDRXexfsx9eW{n3C&{8N8Xo5A!>f-OuISdJsn_ReN~Iqt=<kI&jErt^
+zhBbx#Z9Zv<&*T66yWVT=0w`|5Y7ad+3HG7swCsqL8%&T@n4N}tj_wp|)isr`q-2>6
+zV=_VoYrg*U#(XIpz3MIi`dZpLkgI5XKV8b}w`jK5<f`uCcGD7yOzMu--KcAM>U#y8
+z@_Rv*>gF|9(&D&`^o0X|>#gudAs@ZZ<f~>NFLUA(-_g>^bFJlAA7{=EEqH?5iLpC0
+z6rEy7*3MvUW3V^TzCzA-;FGT&CZGIK-7BRMYG7^9n&RXW@0`)>^N^{%$#shX$@LMl
+z0ZUC{kxJclf_a=Myc`38L*8&2q0*9c`Mr3)sv8yF6pdS3ay6rSNIo8d|IF(fM)444
+z?ic6G($!#p6eJH0LGWUH(ea)&Urw5KXYTz_Vin?!e-GQBgVXDVW)Z#B<daAAxk|l~
+z?nj&8@c#rO9@ebGERB&q_jG<dn``;5(EZn2rFfR@gQ?tgE#K}^owCxvE2d8}dNZS>
+z#G|x)r<TQf9Nw)(6=P0FZ1JxVO6i2$<AxKGn~?4V8Y0v)mjVJ1tRhPKaI`gxM{sOr
+zSyTVqzj+2yWZi=GONIX;Dbny)<_q}QNZ$EU&Fw+YQkR;pyI`_h$Ap{G!H1R|1Y_=p
+z^vsD7tDU(IXP-SMTJXwrYvNJF#HU>nhW#oB?T#Y$bUWR*)@55DKWA#hCygCMy9e9D
+zQx6ym`y+JSG}1x`8Nq)3ww@{eAAi{u^cJZ;+w7w}vz^PtmwY)>sl?**cu#%2gRXh;
+zl&nV<Cx<PUq*I@h*qXg?wR5TLt07OEB6W$4$j7PueSGUzGIE8^tZz-Cz|(27qmj6Y
+zBAUCRVaFmnxM150k?>h}1x}rlv+9(2?W)YWO|me(%E2yW2}JGE4&=<nce;<cng_wy
+zWmZ14*rlqkJ7nw5m^t!b_Onm>EKW&UPxm8LJVW7X7jBBBbHo4icFZ*TWF&T9{Db$5
+z?NfQAnRk9b%Hsk0D<4zjL@XN1zY6rX!8{6Ja{<+Zj+njZbz$K;Ef*S+Zx0TWrZY%y
+z=Q~e^n=w>>dO=#{o@5H4Q%vodX>l&G)T?l$)_J7uD_HSIOT{MteDVi3*lqT8(bwE*
+zGXuXyO{2zMaZbGpK*_FafNwS1M`DRYve-k?J@G@A|2rbxCo3mq51wH{X{iN2&4miW
+z9q&-JAisgOc*C04!}j$C($j~0HW;Fl^TV~d@at~6NJ(n<fhC7$lHxL5N>svE-aNO2
+z2gT^VnER8uH)5O8l0!-r*;P71*pTP2vv&=m_NM>**!r~FwSeETgDnkdDJf#6eF5C4
+z8GKl!5Ohw~eySod`O#X??5q*@=|_2wtzAVISJ6`3X!QB4J>pd+FSVo{gNEJUlC{AQ
+zO;emLc!;Js@!4Zk<q>DVV6Eo06vf31N|v*#(TVeYl*|U*NVm8#W>Laghv^wHsYBYi
+zib$Y%7P`6tZIoE@;Z84}5k10Njm`b+McZ$^0?v<Q5bGUW56d8O3&-La8JW&s_6=3c
+zc0Ph=YafG*Zc(C^$0dUiPkyKGM>q%Y<VTW;b$-cbRyS{5l4!7aFuTNZ{tY+$n=&+y
+zqJ*x0EHA6l>2<IKw65EsLVQx1IL69QV?nd>hKU$;>Sk!`7hhdlC6=y=*_V%*rutW!
+zwPR7T+l<x&8T|w!&brp&BP}LNuND8tL0fW=1GbYrs6N{7eL#c<Mc}gCJp{OX^00q=
+z0P}VzbvA^7TmAwdTy+2ZZvdB<GJLmJZnw8?w^Q*_>A;q?O6<<a?e<*z-78nAOHf|@
+znfKWVBg{$M-Kz8b`1As366%%U_U-q2^E=8j9rWSF^9Ef=Aklp>yj<Fr+-{hHSFc<%
+zLFty;ndiwPD7^}XI#qeS1VwBYe<k*^M{b8%F6JL)m%tnB2tw%$0fYXxN&q2%OWv@C
+zTY1F(3C{fA$_2hhJIV{nu$`DX{o=z-EdyrRJged(`>Urah5AiH{dL%ci<i<!oU3rL
+z<Bq0!$_`SDOU!e7OhURgC<ph1-jW@Qs#2qru59enAw%glG$2%j)&F+idTR_1$u#29
+z6`)PD0rtISj#>-RH<bW)=BFd;AeU(3m|KL;)&g)6fD&N-AEcKA2WKHb^*~z(XEw$5
+z&;3t11D~W9&c4sRSSQ4GoSgV1*~a9R+~yzlz;&_cCeP*wr$=Q=oKBsNckh90xWXQg
+zzeYP+$VikYbKVUv37L<F)PL?mRv_=(fYdg$SeLa}1baj=HZ9s13KbEh&*PY8q2&P=
+z0LwnCl7t4o@w^{BS%I6u=YJ#Ojmf;4mX$t~0WQKbD3I!JetKD(w4}desTxdoz~q2-
+z=C*I#zy|maJ&bU$$Ci@%R)%Bvjt26E$*|AK2F4i6+-8e}^+eoe|0Q(rrN{sN*8Ydk
+zty$0>!Ei#=)L-_02pxV{Or^$!QhPaRv9}kd^U?9V!XPqmRu77UV>C<Sb}TkXgnXFh
+z0lGTvI^N^gKOS~L9R*WI55v8(7vF0h%8vgML2BrxYozX;E?1BNU*}06micQ)KkH7J
+zFIZZYDO~ZbdzDAi+}NN&MhV@sReAF7UfUaEN|>i=(eIMm-+QdzACZ;~JrrL(y!*<m
+zC^0AB=~;OCkv6Y_u5Gy1C&uUie-l}6X;c0DIuO=N0Y=Y50ou{=8*?Vnjb4*HxB%KW
+zOQ+i{ROehyQ87>5EdH8x3|U7^X7S9)6J;Y8S}V?iE`6aS&CZVy417zf0rO8H>Rps+
+z8}n|;?)`L$m>3p%CA-{wcSR=^B)mLUaC{)FRd<X@mwJY#pxg@@ycV$c^e=8<PJnnt
+zJWLvn31`<RAQ=*f_^^}Ow<-S_is%zKo1k2UG0bK>X!etQl8^o1)8eFvV#6(AOm!`6
+ziXJ|qedM$)z_+ub-8naYWLoMhHmhI<Yn)N16sc^u8E)R}<~p+g(3+j9geE@!x#t%X
+z0L{5V+}d^wn{f0~EM;jYm$K9HSqQw*|L~24!wFT)3w-Yo+<N#r8F+fR#l?nK&Z+#9
+z#2roQO}zspZF8YwLAqead#%%O?5IZEgfPQUp4cZWa*=3L_UHGHsFy0&n5+UQ<{yNA
+zydGNQ89sf(JV>)dU|~JQ|Ia;dU;SCrWO=fqlG^+o{w|3QdiS!Ln#eALzsDiu0-mzF
+zkR?dr8r-}C<zp)=<@5wrWs`BkZcVUa@stJhutkMMe4YIMi{zyKrq@*U!0@U0z2fWV
+z>J1f4)WvJH!)-pQFsUtET6Xl7#-myf+s%YSigcmA$eSh$$kw5o60xgyGbw)5nqPHs
+zA?9`#oW+r)S!rf_&_Ru|2mN^vt55i{eE>^(s`NRCC&pGUMn3WOvePk|Cqm3#ZS$!I
+znQ;XUkf;{0o!1>QQX(>bg?`NG5~WLR4Dt<ruzsyyLbmV$Rqi!<duPwR%*1<%6Fs)t
+z&!NXM?g5is*`iZvhMj8sb(6+?KX;FyfO&T@`93{fC$jUPA^#}btfz%a@WoTST&Fxq
+zi0wgFpw`Ao&&(|y77t`g9!ON*Pt*e*3FxUVrCGSOWzr^(WZw>{W~(Ttk>tl#I(E?i
+zxEU0$*U(gyfzagL<sJDx3x**W3`uR%vfS98f+3lC$bvXE?^}J3vajihul7y_m8VTN
+z%^SnQe4rmpSJp_s@i^sBzlPpuQjzc<8+80A7eX4^{y?9t3`bu$Upm`}jqW3tDK`ai
+z1Q(JmZ@S2T{iA*t=>H_NavJi!`07ex8Dn=9xZ)1f$$iQu{M3O`eFw%&soF+&>)iuJ
+znF}E9P>KE?rTFu0L1VrJmz3SRkfHjdgmI+Mk&lXMTsj)5<Q6{cEx!@ZSM>Uf7(BvT
+zB00cUvAAcYld<P$J?doTjv3s3b$4;){<xCvOe}Rh1UvEc8)2dqn_G^tOXs?|)wzbX
+zySVpXWfvjS<Q3Wv?dS^r0N=|+4#0g9Jyg(o%Ntqj8ePzcp}bHjZU5#IaevH=gxh%M
+z{4HPKwJXD7AG~FPJD4eM#>=E9Ui<N`vsS(I&dO+|k%Xl1utHm3ItA4kdsVvU7bGgd
+zY_w*sd?MGNH>|<d-PAQxdC6Exdz5M7PiVb7$sscbb;?F{oi48NJvrv#7CiUIy9=OJ
+z9l-d9^z)$nBMYl7UHEhr-wyDV<+W@%yz5y!#;&D9rW=ZHnT(8C3EK4YQhd8*P=ZsK
+yiw@i6u@6klvfQV(e->W&b7Jd0nS;ZAna-7Nf90Q|c)HWt1j)~Dw+MI9_<sRWrH3;B
+
+literal 0
+HcmV?d00001
+
+diff --git a/frontend/src/components/BrandMark.tsx b/frontend/src/components/BrandMark.tsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..23ea31363d417b7b04306463e5cebc19e6ccbdc9
+--- /dev/null
++++ b/frontend/src/components/BrandMark.tsx
+@@ -0,0 +1,59 @@
++import { cn } from '@/lib/utils';
++
++interface BrandMarkProps {
++  variant?: 'light' | 'dark';
++  size?: 'sm' | 'md' | 'lg';
++  className?: string;
++}
++
++const sizeStyles = {
++  sm: {
++    logo: 'h-7 w-7',
++    title: 'text-sm',
++    subtitle: 'text-xs',
++    gap: 'gap-2',
++  },
++  md: {
++    logo: 'h-8 w-8',
++    title: 'text-base',
++    subtitle: 'text-xs',
++    gap: 'gap-3',
++  },
++  lg: {
++    logo: 'h-10 w-10',
++    title: 'text-lg',
++    subtitle: 'text-sm',
++    gap: 'gap-3',
++  },
++};
++
++export function BrandMark({ variant = 'dark', size = 'md', className }: BrandMarkProps) {
++  const styles = sizeStyles[size];
++  const titleColor = variant === 'dark' ? 'text-slate-900' : 'text-white';
++  const subtitleColor = variant === 'dark' ? 'text-slate-500' : 'text-slate-300';
++
++  return (
++    <div className={cn('flex items-center', styles.gap, className)}>
++      <div className="flex items-center gap-2">
++        <img
++          src="/forbiz-logo.jpg"
++          alt="Forbiz"
++          className={cn('rounded-md object-cover shadow-sm', styles.logo)}
++        />
++        <img
++          src="/getwork-logo.jpg"
++          alt="GetWork"
++          className={cn('rounded-md object-cover shadow-sm', styles.logo)}
++        />
++      </div>
++      <div className="leading-tight">
++        <div className={cn('font-semibold tracking-wide uppercase', styles.title, titleColor)}>
++          Forbiz &amp; GetWork
++        </div>
++        <div className={cn('font-medium', styles.subtitle, subtitleColor)}>
++          Central de Ferramentas
++        </div>
++      </div>
++    </div>
++  );
++}
+diff --git a/frontend/src/components/Input.tsx b/frontend/src/components/Input.tsx
+index 69779c689c496fc22cc16f6bb36e0fa39a80de94..12a0967d5993dc4176dc20cd54a4d67b57ba292e 100644
+--- a/frontend/src/components/Input.tsx
++++ b/frontend/src/components/Input.tsx
+@@ -10,58 +10,58 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+   leftIcon?: ReactNode;
+   rightIcon?: ReactNode;
+ }
+ 
+ export const Input = forwardRef<HTMLInputElement, InputProps>(
+   ({ label, error, hint, icon, leftIcon, rightIcon, className, required, disabled, ...props }, ref) => {
+     const iconLeft = icon || leftIcon;
+     return (
+       <div className="space-y-1.5">
+         {label && (
+           <label className="block text-sm font-medium text-slate-700">
+             {label}
+             {required && <span className="text-red-500 ml-0.5">*</span>}
+           </label>
+         )}
+         <div className="relative">
+           {iconLeft && (
+             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+               {iconLeft}
+             </div>
+           )}
+           <input
+             ref={ref}
+             disabled={disabled}
+             className={cn(
+-              'w-full py-2 border rounded-md outline-none transition-all text-sm',
++              'w-full px-3 py-2 border rounded-md outline-none transition-all text-sm',
+               'focus:ring-2 focus:ring-primary/20 focus:border-primary',
+               'disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed',
+               error 
+                 ? 'border-red-300 focus:ring-red-200 focus:border-red-500' 
+                 : 'border-slate-300',
+-              iconLeft ? 'pl-10' : 'px-3',
+-              rightIcon ? 'pr-10' : 'px-3',
++              iconLeft ? 'pl-10' : null,
++              rightIcon ? 'pr-10' : null,
+               className
+             )}
+             {...props}
+           />
+           {rightIcon && (
+             <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+               {rightIcon}
+             </div>
+           )}
+           {error && (
+             <div className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500">
+               <AlertCircle className="h-4 w-4" />
+             </div>
+           )}
+         </div>
+         {error && (
+           <p className="text-xs text-red-600 flex items-center gap-1">
+             {error}
+           </p>
+         )}
+         {hint && !error && (
+           <p className="text-xs text-slate-500">{hint}</p>
+         )}
+       </div>
+     );
+diff --git a/frontend/src/layout/AppLayout.tsx b/frontend/src/layout/AppLayout.tsx
+index a6941f59a4823e12d4be5ea1c8cd7e96ed6c648c..3a0072e73f022f6b8a35daeb1b43bdf99a9e3c1e 100644
+--- a/frontend/src/layout/AppLayout.tsx
++++ b/frontend/src/layout/AppLayout.tsx
+@@ -1,22 +1,22 @@
+ import { ReactNode } from 'react';
+ import { Sidebar } from './Sidebar';
+ import { Header } from './Header';
+ 
+ interface AppLayoutProps {
+   title: string;
+   children: ReactNode;
+ }
+ 
+ export function AppLayout({ title, children }: AppLayoutProps) {
+   return (
+-    <div className="flex h-screen bg-slate-50">
++    <div className="flex h-screen bg-slate-100">
+       <Sidebar />
+       <div className="flex-1 ml-64 flex flex-col">
+         <Header title={title} />
+-        <main className="flex-1 overflow-auto p-8">
++        <main className="flex-1 overflow-auto px-8 py-6">
+           {children}
+         </main>
+       </div>
+     </div>
+   );
+ }
+diff --git a/frontend/src/layout/Header.tsx b/frontend/src/layout/Header.tsx
+index 44453b241c58eb0a01f089e9d01e650ced08cb25..96ffced2d8f496581780a6e4e2ae59324df8ae94 100644
+--- a/frontend/src/layout/Header.tsx
++++ b/frontend/src/layout/Header.tsx
+@@ -9,51 +9,51 @@ interface HeaderProps {
+ export function Header({ title }: HeaderProps) {
+   const { user, logout } = useAuth();
+   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+   const dropdownRef = useRef<HTMLDivElement>(null);
+ 
+   // Close dropdown when clicking outside
+   useEffect(() => {
+     function handleClickOutside(event: MouseEvent) {
+       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+         setIsDropdownOpen(false);
+       }
+     }
+     document.addEventListener('mousedown', handleClickOutside);
+     return () => document.removeEventListener('mousedown', handleClickOutside);
+   }, []);
+ 
+   const getInitials = (email: string) => {
+     const parts = email.split('@')[0].split('.');
+     if (parts.length >= 2) {
+       return (parts[0][0] + parts[1][0]).toUpperCase();
+     }
+     return email.slice(0, 2).toUpperCase();
+   };
+ 
+   return (
+-    <header className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-8">
++    <header className="bg-white border-b border-slate-200/80 h-16 flex items-center justify-between px-8 shadow-sm">
+       <div>
+         <h1 className="text-xl font-semibold text-slate-900">{title}</h1>
+       </div>
+ 
+       <div className="flex items-center gap-4">
+         {/* User Dropdown */}
+         <div className="relative" ref={dropdownRef}>
+           <button
+             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+             className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors"
+           >
+             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+               <span className="text-sm font-medium text-primary">
+                 {user?.email ? getInitials(user.email) : 'U'}
+               </span>
+             </div>
+             <div className="hidden sm:block text-left">
+               <p className="text-sm font-medium text-slate-900">{user?.name || 'Usuário'}</p>
+               <p className="text-xs text-slate-500">{user?.email}</p>
+             </div>
+             <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+           </button>
+ 
+           {/* Dropdown Menu */}
+           {isDropdownOpen && (
+diff --git a/frontend/src/layout/Sidebar.tsx b/frontend/src/layout/Sidebar.tsx
+index 7a7e2666fcde6c372cefc2c5a2d087822b69eec8..8dc317f358fcaf22f366fbf271c0abeec22d2636 100644
+--- a/frontend/src/layout/Sidebar.tsx
++++ b/frontend/src/layout/Sidebar.tsx
+@@ -1,87 +1,84 @@
+ import { NavLink } from 'react-router-dom';
+ import { 
+   Users, Package, Database, MessageSquareText, 
+   Zap, Send, FileCheck, Book 
+ } from 'lucide-react';
+ import { cn } from '@/lib/utils';
++import { BrandMark } from '@/components/BrandMark';
+ 
+ const navSections = [
+   {
+     title: 'Gestão',
+     items: [
+       { to: '/tenants', icon: Users, label: 'Tenants' },
+       { to: '/products', icon: Package, label: 'Produtos' },
+     ],
+   },
+   {
+     title: 'Automação WhatsApp',
+     items: [
+       { to: '/sources', icon: Database, label: 'Fontes de Dados' },
+       { to: '/templates', icon: MessageSquareText, label: 'Templates' },
+       { to: '/jobs', icon: Zap, label: 'Jobs' },
+     ],
+   },
+   {
+     title: 'Monitoramento',
+     items: [
+       { to: '/outbox', icon: Send, label: 'Mensagens' },
+       { to: '/logs', icon: FileCheck, label: 'Logs' },
+     ],
+   },
+   {
+     title: 'Suporte',
+     items: [
+       { to: '/docs', icon: Book, label: 'Documentação' },
+     ],
+   },
+ ];
+ 
+ export function Sidebar() {
+   return (
+-    <aside className="w-64 bg-slate-900 text-white flex flex-col h-screen fixed left-0 top-0">
++    <aside className="w-64 bg-slate-950 text-white flex flex-col h-screen fixed left-0 top-0 border-r border-slate-800/80">
+       {/* Logo */}
+-      <div className="p-4 border-b border-slate-800">
+-        <img 
+-          src="/logo-combined.png" 
+-          alt="Forbiz & GetWork" 
+-          className="h-12 w-auto mx-auto"
+-        />
++      <div className="p-5 border-b border-slate-800/80">
++        <BrandMark variant="light" size="sm" />
+       </div>
+ 
+-      <nav className="flex-1 p-4 space-y-6 overflow-y-auto">
++      <nav className="flex-1 px-4 py-5 space-y-6 overflow-y-auto">
+         {navSections.map((section) => (
+           <div key={section.title}>
+-            <h2 className="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
++            <h2 className="px-4 text-[11px] font-semibold text-slate-500 uppercase tracking-[0.2em] mb-2">
+               {section.title}
+             </h2>
+             <div className="space-y-1">
+               {section.items.map((item) => (
+                 <NavLink
+                   key={item.to}
+                   to={item.to}
+                   className={({ isActive }) =>
+                     cn(
+                       'flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors',
+                       isActive
+-                        ? 'bg-primary text-white'
+-                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
++                        ? 'bg-slate-800 text-white shadow-sm'
++                        : 'text-slate-300 hover:bg-slate-900 hover:text-white'
+                     )
+                   }
+                 >
+                   <item.icon className="h-5 w-5" />
+                   <span className="font-medium text-sm">{item.label}</span>
+                 </NavLink>
+               ))}
+             </div>
+           </div>
+         ))}
+       </nav>
+ 
+       <div className="p-4 border-t border-slate-800">
+         <p className="text-xs text-slate-500 text-center">
+           © 2026 Forbiz & GetWork
+         </p>
+       </div>
+     </aside>
+   );
+ }
+diff --git a/frontend/src/pages/LoginPage.tsx b/frontend/src/pages/LoginPage.tsx
+index 901fe92c92a12078fcf3fa792cc2e5748527ae2a..86ef01a85eefffda20358bc54ce75a7f1720e4b1 100644
+--- a/frontend/src/pages/LoginPage.tsx
++++ b/frontend/src/pages/LoginPage.tsx
+@@ -1,180 +1,170 @@
+ import { useState, FormEvent } from 'react';
+ import { useNavigate, Link } from 'react-router-dom';
+ import { useAuth } from '@/auth/AuthContext';
+ import { Loader2, AlertCircle, Lock, Mail, CheckCircle } from 'lucide-react';
++import { BrandMark } from '@/components/BrandMark';
+ 
+ export function LoginPage() {
+   const [email, setEmail] = useState('');
+   const [password, setPassword] = useState('');
+   const [error, setError] = useState('');
+   const [loading, setLoading] = useState(false);
+   const { login } = useAuth();
+   const navigate = useNavigate();
+ 
+   const handleSubmit = async (e: FormEvent) => {
+     e.preventDefault();
+     setError('');
+     setLoading(true);
+ 
+     const result = await login(email, password);
+ 
+     if (result.success) {
+       navigate('/tenants');
+     } else {
+       setError(result.error || 'Erro ao fazer login');
+     }
+ 
+     setLoading(false);
+   };
+ 
+   return (
+-    <div className="min-h-screen bg-slate-900 flex">
++    <div className="min-h-screen bg-slate-950 flex">
+       {/* Left Panel - Branding */}
+-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-800 to-slate-900 items-center justify-center p-12">
+-        <div className="max-w-md text-white">
+-          {/* Logo */}
+-          <div className="mb-8">
+-            <img 
+-              src="/logo-combined.png" 
+-              alt="Forbiz & GetWork" 
+-              className="h-16 w-auto"
+-            />
+-          </div>
++      <div className="hidden lg:flex lg:w-1/2 bg-slate-950 items-center justify-center p-12">
++        <div className="max-w-md text-white space-y-8">
++          <BrandMark variant="light" size="lg" />
+           
+           <h2 className="text-2xl font-semibold mb-4">
+             Gerencie suas integrações com Senior X
+           </h2>
+           
+           <p className="text-white/70 leading-relaxed mb-8">
+             Plataforma centralizada para gerenciamento de tenants, notificações WhatsApp, 
+             e integração com GED, Sign e HCM.
+           </p>
+           
+           <div className="space-y-3">
+             <div className="flex items-center gap-3 text-white/90">
+-              <div className="h-8 w-8 rounded-full bg-primary/30 flex items-center justify-center">
+-                <CheckCircle className="h-4 w-4 text-primary" />
++              <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center">
++                <CheckCircle className="h-4 w-4 text-white" />
+               </div>
+               <span>Notificações WhatsApp automatizadas</span>
+             </div>
+             <div className="flex items-center gap-3 text-white/90">
+-              <div className="h-8 w-8 rounded-full bg-primary/30 flex items-center justify-center">
+-                <CheckCircle className="h-4 w-4 text-primary" />
++              <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center">
++                <CheckCircle className="h-4 w-4 text-white" />
+               </div>
+               <span>Integração com GED e Sign</span>
+             </div>
+             <div className="flex items-center gap-3 text-white/90">
+-              <div className="h-8 w-8 rounded-full bg-primary/30 flex items-center justify-center">
+-                <CheckCircle className="h-4 w-4 text-primary" />
++              <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center">
++                <CheckCircle className="h-4 w-4 text-white" />
+               </div>
+               <span>Extensão para Cercas Virtuais</span>
+             </div>
+             <div className="flex items-center gap-3 text-white/90">
+-              <div className="h-8 w-8 rounded-full bg-primary/30 flex items-center justify-center">
+-                <CheckCircle className="h-4 w-4 text-primary" />
++              <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center">
++                <CheckCircle className="h-4 w-4 text-white" />
+               </div>
+               <span>Multi-tenant com isolamento</span>
+             </div>
+           </div>
+         </div>
+       </div>
+ 
+       {/* Right Panel - Login Form */}
+-      <div className="flex-1 flex items-center justify-center p-8">
++      <div className="flex-1 flex items-center justify-center p-8 bg-slate-100">
+         <div className="w-full max-w-md">
+           {/* Mobile Logo */}
+           <div className="lg:hidden flex items-center justify-center mb-8">
+-            <img 
+-              src="/logo-combined.png" 
+-              alt="Forbiz & GetWork" 
+-              className="h-12 w-auto"
+-            />
++            <BrandMark variant="dark" size="md" />
+           </div>
+ 
+-          <div className="bg-white rounded-xl shadow-2xl p-8">
++          <div className="bg-white rounded-2xl shadow-xl border border-slate-200/70 p-8">
+             <div className="text-center mb-8">
+               <h2 className="text-2xl font-bold text-slate-900">Bem-vindo de volta</h2>
+               <p className="text-slate-600 mt-1">Entre com suas credenciais para continuar</p>
+             </div>
+ 
+             <form onSubmit={handleSubmit} className="space-y-5">
+               <div>
+                 <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1.5">
+                   Email
+                 </label>
+                 <div className="relative">
+                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                   <input
+                     id="email"
+                     type="email"
+                     value={email}
+                     onChange={(e) => setEmail(e.target.value)}
+                     required
+-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition text-sm"
++                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition text-sm bg-white"
+                     placeholder="seu@email.com"
+                   />
+                 </div>
+               </div>
+ 
+               <div>
+                 <div className="flex items-center justify-between mb-1.5">
+                   <label htmlFor="password" className="block text-sm font-medium text-slate-700">
+                     Senha
+                   </label>
+                   <Link 
+                     to="/forgot-password" 
+                     className="text-sm text-primary hover:text-primary/80 font-medium"
+                   >
+                     Esqueceu a senha?
+                   </Link>
+                 </div>
+                 <div className="relative">
+                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                   <input
+                     id="password"
+                     type="password"
+                     value={password}
+                     onChange={(e) => setPassword(e.target.value)}
+                     required
+-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition text-sm"
++                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition text-sm bg-white"
+                     placeholder="••••••••"
+                   />
+                 </div>
+               </div>
+ 
+               {error && (
+                 <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                   <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                   <span>{error}</span>
+                 </div>
+               )}
+ 
+               <button
+                 type="submit"
+                 disabled={loading}
+-                className="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
++                className="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm"
+               >
+                 {loading ? (
+                   <>
+                     <Loader2 className="h-5 w-5 animate-spin" />
+                     Entrando...
+                   </>
+                 ) : (
+                   'Entrar'
+                 )}
+               </button>
+             </form>
+ 
+             <div className="mt-6 text-center">
+               <p className="text-sm text-slate-600">
+                 Não tem uma conta?{' '}
+                 <Link 
+                   to="/register" 
+                   className="text-primary hover:text-primary/80 font-medium"
+                 >
+                   Criar conta
+                 </Link>
+               </p>
+             </div>
+           </div>
+ 
+diff --git a/frontend/src/pages/RegisterPage.tsx b/frontend/src/pages/RegisterPage.tsx
+index 2b413077bb3eeaaa73eda3986f78957f1c645988..bdd24e874bcc5c7c0901c97589c104c8e9e228d6 100644
+--- a/frontend/src/pages/RegisterPage.tsx
++++ b/frontend/src/pages/RegisterPage.tsx
+@@ -1,29 +1,30 @@
+ import { useState } from 'react';
+ import { Link, useNavigate } from 'react-router-dom';
+ import { Button } from '@/components/Button';
+ import { Input } from '@/components/Input';
++import { BrandMark } from '@/components/BrandMark';
+ import { apiClient } from '@/api/client';
+ import { Mail, Lock, User, ArrowLeft, CheckCircle } from 'lucide-react';
+ import { toast } from 'sonner';
+ 
+ export function RegisterPage() {
+   const navigate = useNavigate();
+   const [formData, setFormData] = useState({
+     name: '',
+     email: '',
+     password: '',
+     confirmPassword: '',
+   });
+   const [loading, setLoading] = useState(false);
+   const [success, setSuccess] = useState(false);
+ 
+   const handleSubmit = async (e: React.FormEvent) => {
+     e.preventDefault();
+ 
+     // Validações
+     if (!formData.name.trim()) {
+       toast.error('Nome é obrigatório');
+       return;
+     }
+ 
+     if (!formData.email.trim()) {
+@@ -36,124 +37,114 @@ export function RegisterPage() {
+       return;
+     }
+ 
+     if (formData.password !== formData.confirmPassword) {
+       toast.error('As senhas não coincidem');
+       return;
+     }
+ 
+     setLoading(true);
+     const response = await apiClient.post('/auth/register', {
+       name: formData.name,
+       email: formData.email,
+       password: formData.password,
+     });
+     setLoading(false);
+ 
+     if (response.error) {
+       toast.error(response.error.message || 'Erro ao criar conta');
+     } else {
+       setSuccess(true);
+     }
+   };
+ 
+   if (success) {
+     return (
+-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
++      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+         <div className="w-full max-w-md">
+-          <div className="bg-white rounded-2xl shadow-2xl p-8 text-center">
++          <div className="bg-white rounded-2xl shadow-xl border border-slate-200/70 p-8 text-center">
+             <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+               <CheckCircle className="h-8 w-8 text-green-600" />
+             </div>
+             <h2 className="text-2xl font-bold text-slate-900 mb-2">Conta Criada!</h2>
+             <p className="text-slate-600 mb-6">
+               Sua conta foi criada com sucesso. Você já pode fazer login.
+             </p>
+             <Button onClick={() => navigate('/login')} className="w-full">
+               Ir para Login
+             </Button>
+           </div>
+         </div>
+       </div>
+     );
+   }
+ 
+   return (
+-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex">
++    <div className="min-h-screen bg-slate-950 flex">
+       {/* Left side - Branding */}
+       <div className="hidden lg:flex lg:w-1/2 flex-col justify-center items-center p-12 text-white">
+-        <div className="max-w-md">
+-          <div className="mb-8">
+-            <img 
+-              src="/logo-combined.png" 
+-              alt="Forbiz & GetWork" 
+-              className="h-14 w-auto"
+-            />
+-          </div>
++        <div className="max-w-md space-y-8">
++          <BrandMark variant="light" size="lg" />
+           
+           <h2 className="text-4xl font-bold mb-4">
+             Crie sua conta
+           </h2>
+           <p className="text-lg text-slate-300 mb-8">
+             Junte-se à plataforma e tenha acesso às ferramentas de automação 
+             integradas com Senior X.
+           </p>
+           
+           <div className="space-y-4">
+             <div className="flex items-center gap-3 text-slate-300">
+-              <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+-                <CheckCircle className="h-4 w-4 text-primary" />
++              <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center">
++                <CheckCircle className="h-4 w-4 text-white" />
+               </div>
+               <span>Notificações WhatsApp automatizadas</span>
+             </div>
+             <div className="flex items-center gap-3 text-slate-300">
+-              <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+-                <CheckCircle className="h-4 w-4 text-primary" />
++              <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center">
++                <CheckCircle className="h-4 w-4 text-white" />
+               </div>
+               <span>Integração com GED e Sign</span>
+             </div>
+             <div className="flex items-center gap-3 text-slate-300">
+-              <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+-                <CheckCircle className="h-4 w-4 text-primary" />
++              <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center">
++                <CheckCircle className="h-4 w-4 text-white" />
+               </div>
+               <span>Extensão para Cercas Virtuais</span>
+             </div>
+           </div>
+         </div>
+       </div>
+ 
+       {/* Right side - Form */}
+-      <div className="w-full lg:w-1/2 flex items-center justify-center p-4 lg:p-12">
++      <div className="w-full lg:w-1/2 flex items-center justify-center p-4 lg:p-12 bg-slate-100">
+         <div className="w-full max-w-md">
+-          <div className="bg-white rounded-2xl shadow-2xl p-8">
++          <div className="bg-white rounded-2xl shadow-xl border border-slate-200/70 p-8">
+             {/* Mobile branding */}
+             <div className="lg:hidden flex items-center justify-center mb-6">
+-              <img 
+-                src="/logo-combined.png" 
+-                alt="Forbiz & GetWork" 
+-                className="h-10 w-auto"
+-              />
++              <BrandMark variant="dark" size="md" />
+             </div>
+ 
+             <div className="mb-6">
+               <h2 className="text-2xl font-bold text-slate-900">Criar Conta</h2>
+               <p className="text-slate-500 mt-1">Preencha os dados abaixo</p>
+             </div>
+ 
+             <form onSubmit={handleSubmit} className="space-y-4">
+               <Input
+                 label="Nome completo"
+                 type="text"
+                 value={formData.name}
+                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                 placeholder="Seu nome"
+                 icon={<User className="h-5 w-5" />}
+                 required
+               />
+ 
+               <Input
+                 label="Email"
+                 type="email"
+                 value={formData.email}
+                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                 placeholder="seu@email.com"
+                 icon={<Mail className="h-5 w-5" />}
+diff --git a/frontend/src/pages/TenantsPage.tsx b/frontend/src/pages/TenantsPage.tsx
+index 0146538a41e920f45ab944734d21a8b92475daae..37e20ace5841bf5335727bcc5b2eb06be5bc4c26 100644
+--- a/frontend/src/pages/TenantsPage.tsx
++++ b/frontend/src/pages/TenantsPage.tsx
+@@ -129,56 +129,56 @@ export function TenantsPage() {
+       setIsModalOpen(false);
+       loadTenants();
+     }
+   };
+ 
+   const columns = [
+     { 
+       header: 'Nome', 
+       accessor: (row: Tenant) => (
+         <div className="flex items-center gap-3">
+           <div className="h-9 w-9 rounded-lg bg-slate-100 flex items-center justify-center">
+             <Building2 className="h-5 w-5 text-slate-500" />
+           </div>
+           <div>
+             <div className="font-medium text-slate-900">{row.name}</div>
+             <div className="text-xs text-slate-500">{row.slug || row.domain}</div>
+           </div>
+         </div>
+       ),
+     },
+     {
+       header: 'Status',
+       accessor: (row: Tenant) => (
+         <span
+           className={`inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full ${
+-            row.isActive 
++            (row.active ?? row.isActive) 
+               ? 'bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20' 
+               : 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/20'
+           }`}
+         >
+-          {row.isActive ? 'Ativo' : 'Inativo'}
++          {(row.active ?? row.isActive) ? 'Ativo' : 'Inativo'}
+         </span>
+       ),
+     },
+     {
+       header: 'Ações',
+       accessor: (row: Tenant) => (
+         <div className="flex gap-1">
+           <Button 
+             size="sm" 
+             variant="ghost" 
+             onClick={() => navigate(`/tenants/${row.id}/products`)}
+             title="Gerenciar produtos"
+           >
+             <Package className="h-4 w-4" />
+           </Button>
+           <Button 
+             size="sm" 
+             variant="ghost" 
+             onClick={() => navigate(`/tenants/${row.id}`)}
+             title="Configurações do tenant"
+           >
+             <Settings className="h-4 w-4" />
+           </Button>
+           <Button 
+             size="sm" 
+diff --git a/prisma/schema.prisma b/prisma/schema.prisma
+index 8f7a1a6463b4da9d7fb3087189b93904ad9e49b2..1351e1b63e0260ef91772cb122fac0bed7d2065f 100644
+--- a/prisma/schema.prisma
++++ b/prisma/schema.prisma
+@@ -4,50 +4,63 @@
+ 
+ generator client {
+   provider = "prisma-client-js"
+ }
+ 
+ datasource db {
+   provider  = "postgresql"
+   url       = env("DATABASE_URL")
+   directUrl = env("DIRECT_URL")
+ }
+ 
+ // --- Usuários do sistema (admin interno) ---
+ model User {
+   id        String   @id @default(uuid())
+   email     String   @unique
+   password  String
+   name      String?
+   role      UserRole @default(ADMIN)
+   active    Boolean  @default(true)
+   createdAt DateTime @default(now()) @map("created_at")
+   updatedAt DateTime @updatedAt @map("updated_at")
+ 
+   @@map("users")
+ }
+ 
++model Product {
++  id          String   @id @default(uuid())
++  code        String   @unique
++  name        String
++  description String?
++  icon        String?
++  isActive    Boolean  @default(true) @map("is_active")
++  createdAt   DateTime @default(now()) @map("created_at")
++  updatedAt   DateTime @updatedAt @map("updated_at")
++
++  @@map("products")
++}
++
+ enum UserRole {
+   ADMIN
+   VIEWER
+ }
+ 
+ // --- Tenants (clientes do SaaS) ---
+ model Tenant {
+   id        String   @id @default(uuid())
+   name      String
+   slug      String   @unique
+   active    Boolean  @default(true)
+   metadata  Json?
+   createdAt DateTime @default(now()) @map("created_at")
+   updatedAt DateTime @updatedAt @map("updated_at")
+ 
+   seniorCredentials    SeniorCredentials?
+   notificationChannels NotificationChannel[]
+   rules                Rule[]
+   schedules            Schedule[]
+   outboxMessages       OutboxMessage[]
+   deliveryLogs         DeliveryLog[]
+   idempotencyKeys      IdempotencyKey[]
+ 
+   @@map("tenants")
+ }
+ 
+EOF
+)
