@@ -137,10 +137,42 @@ enum ChannelType {
 }
 
 // --- Regras de notificação ---
+// --- Fonte de Dados (reutilizável) ---
+model DataSource {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+
+  // Configuração da API
+  apiModule   String  @map("api_module")  // sign, ecm_ged, hcm, etc.
+  apiMethod   String  @default("POST") @map("api_method")
+  apiEndpoint String  @map("api_endpoint")
+  apiParams   Json?   @map("api_params")  // Parâmetros do body/query
+  apiHeaders  Json?   @map("api_headers") // Headers adicionais
+
+  // Mapeamento do response
+  responseDataPath String? @map("response_data_path") // Ex: "contents", "items"
+  responseMapping  Json?   @map("response_mapping")   // Campos a extrair
+
+  // Status
+  isActive    Boolean @default(true) @map("is_active")
+  lastTestedAt DateTime? @map("last_tested_at")
+  lastTestStatus String? @map("last_test_status")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  rules Rule[]
+
+  @@map("data_sources")
+}
+
+// --- Regras de notificação ---
 model Rule {
   id          String  @id @default(uuid())
   tenantId    String  @map("tenant_id")
   channelId   String? @map("channel_id")
+  dataSourceId String? @map("data_source_id")
   name        String
   description String?
   enabled     Boolean @default(true)
@@ -160,6 +192,7 @@ model Rule {
 
   tenant         Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   channel        NotificationChannel? @relation(fields: [channelId], references: [id])
+  dataSource     DataSource?          @relation(fields: [dataSourceId], references: [id])
   schedules      ScheduleRule[]
   outboxMessages OutboxMessage[]
   deliveryLogs   DeliveryLog[]

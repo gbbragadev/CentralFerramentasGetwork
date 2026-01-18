@@ -208,6 +208,63 @@ export interface WhatsAppSource {
 }
 
 // ============================================================================
+// DATA SOURCES (FONTES DE DADOS REUTILIZÁVEIS)
+// ============================================================================
+
+export interface DataSource {
+  id: string;
+  name: string;
+  description: string | null;
+
+  // Configuração da API
+  apiModule: string;          // sign, ecm_ged, hcm, etc.
+  apiMethod: 'GET' | 'POST';
+  apiEndpoint: string;
+  apiParams: Record<string, unknown> | null;
+  apiHeaders: Record<string, string> | null;
+
+  // Mapeamento de resposta
+  responseDataPath: string | null;
+  responseMapping: Record<string, unknown> | null;
+
+  // Status
+  isActive: boolean;
+  lastTestedAt: string | null;
+  lastTestStatus: 'SUCCESS' | 'ERROR' | null;
+
+  createdAt: string;
+  updatedAt: string;
+
+  // Contagem de regras usando esta fonte
+  _count?: {
+    rules: number;
+  };
+}
+
+export interface DataSourcePreset {
+  id: string;
+  name: string;
+  description: string;
+  apiModule: string;
+  apiMethod: string;
+  apiEndpoint: string;
+  apiParams: Record<string, unknown>;
+  responseDataPath: string;
+}
+
+export interface DataSourceTestResult {
+  success: boolean;
+  httpStatus: number;
+  duration: number;
+  url: string;
+  method: string;
+  requestBody: Record<string, unknown>;
+  response: unknown;
+  extractedData: unknown;
+  recordCount: number | null;
+}
+
+// ============================================================================
 // WHATSAPP TEMPLATES (MODELOS DE MENSAGEM)
 // ============================================================================
 

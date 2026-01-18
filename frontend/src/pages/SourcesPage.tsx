@@ -5,17 +5,9 @@ import { Table } from '@/components/Table';
 import { Modal } from '@/components/Modal';
 import { Input } from '@/components/Input';
 import { apiClient } from '@/api/client';
-import { WhatsAppSource, Tenant, sourceTypeLabels, SourceType } from '@/api/types';
-import { Plus, Edit, Trash2, Database, AlertTriangle, Code } from 'lucide-react';
+import { DataSource, DataSourcePreset, DataSourceTestResult, Tenant } from '@/api/types';
+import { Plus, Edit, Trash2, Database, AlertTriangle, Code, Play, CheckCircle, XCircle, Clock, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
-
-const SOURCE_TYPE_OPTIONS: { value: SourceType; label: string }[] = [
-  { value: 'sign', label: 'Sign - Assinaturas Pendentes' },
-  { value: 'ged', label: 'GED - Gestão de Documentos' },
-  { value: 'ged_folder', label: 'Pasta Específica do GED' },
-  { value: 'admission', label: 'Admissão Digital' },
-  { value: 'custom', label: 'Personalizado' },
-];
 
 const API_MODULE_OPTIONS = [
   { value: 'sign', label: 'Sign (Assinaturas)' },
@@ -24,90 +16,109 @@ const API_MODULE_OPTIONS = [
 ];
 
 export function SourcesPage() {
-  const [sources, setSources] = useState<WhatsAppSource[]>([]);
+  const [sources, setSources] = useState<DataSource[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [presets, setPresets] = useState<DataSourcePreset[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedSource, setSelectedSource] = useState<WhatsAppSource | null>(null);
-  const [selectedTenantFilter, setSelectedTenantFilter] = useState<string>('');
+  const [isTestModalOpen, setIsTestModalOpen] = useState(false);
+  const [isPresetsModalOpen, setIsPresetsModalOpen] = useState(false);
+  const [selectedSource, setSelectedSource] = useState<DataSource | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [testResult, setTestResult] = useState<DataSourceTestResult | null>(null);
+  const [testTenantId, setTestTenantId] = useState<string>('');
+  const [testing, setTesting] = useState(false);
 
   const [formData, setFormData] = useState({
-    tenantId: '',
     name: '',
     description: '',
-    sourceType: 'sign' as SourceType,
     apiModule: 'sign',
-    apiEndpoint: '/sign/queries/listEnvelopes',
-    apiMethod: 'POST',
-    apiParams: '{\n  "status": ["PENDING_SIGNATURE"],\n  "limit": 100\n}',
+    apiMethod: 'POST' as 'GET' | 'POST',
+    apiEndpoint: 'queries/listEnvelopes',
+    apiParams: '{\n  "status": ["PENDING"],\n  "offset": 0,\n  "limit": 50\n}',
+    apiHeaders: '{}',
     responseDataPath: 'contents',
+    responseMapping: '{}',
     isActive: true,
   });
 
   const loadData = async () => {
     setLoading(true);
-    
-    const [sourcesRes, tenantsRes] = await Promise.all([
-      apiClient.get<WhatsAppSource[]>(`/whatsapp/sources${selectedTenantFilter ? `?tenantId=${selectedTenantFilter}` : ''}`),
+
+    const [sourcesRes, tenantsRes, presetsRes] = await Promise.all([
+      apiClient.get<DataSource[]>('/datasources'),
       apiClient.get<Tenant[]>('/tenants?pageSize=100'),
+      apiClient.get<DataSourcePreset[]>('/datasources/presets/list'),
     ]);
 
     if (sourcesRes.data) setSources(sourcesRes.data);
-    if (tenantsRes.data) setTenants(tenantsRes.data);
-    
+    if (tenantsRes.data) {
+      setTenants(tenantsRes.data);
+      // Set default tenant for testing
+      if (tenantsRes.data.length > 0 && !testTenantId) {
+        setTestTenantId(tenantsRes.data[0].id);
+      }
+    }
+    if (presetsRes.data) setPresets(presetsRes.data);
+
     setLoading(false);
   };
 
   useEffect(() => {
     loadData();
-  }, [selectedTenantFilter]);
+  }, []);
 
   const handleCreate = () => {
     setSelectedSource(null);
     setFormData({
-      tenantId: selectedTenantFilter || (tenants[0]?.id || ''),
       name: '',
       description: '',
-      sourceType: 'sign',
       apiModule: 'sign',
-      apiEndpoint: '/sign/queries/listEnvelopes',
       apiMethod: 'POST',
-      apiParams: '{\n  "status": ["PENDING_SIGNATURE"],\n  "limit": 100\n}',
+      apiEndpoint: 'queries/listEnvelopes',
+      apiParams: '{\n  "status": ["PENDING"],\n  "offset": 0,\n  "limit": 50\n}',
+      apiHeaders: '{}',
       responseDataPath: 'contents',
+      responseMapping: '{}',
       isActive: true,
     });
     setIsModalOpen(true);
   };
 
-  const handleEdit = (source: WhatsAppSource) => {
+  const handleEdit = (source: DataSource) => {
     setSelectedSource(source);
     setFormData({
-      tenantId: source.tenantId,
       name: source.name,
       description: source.description || '',
-      sourceType: source.sourceType,
       apiModule: source.apiModule,
-      apiEndpoint: source.apiEndpoint,
       apiMethod: source.apiMethod,
-      apiParams: JSON.stringify(source.apiParams, null, 2),
-      responseDataPath: source.responseDataPath,
+      apiEndpoint: source.apiEndpoint,
+      apiParams: source.apiParams ? JSON.stringify(source.apiParams, null, 2) : '{}',
+      apiHeaders: source.apiHeaders ? JSON.stringify(source.apiHeaders, null, 2) : '{}',
+      responseDataPath: source.responseDataPath || '',
+      responseMapping: source.responseMapping ? JSON.stringify(source.responseMapping, null, 2) : '{}',
       isActive: source.isActive,
     });
     setIsModalOpen(true);
   };
 
-  const handleDeleteClick = (source: WhatsAppSource) => {
+  const handleDeleteClick = (source: DataSource) => {
     setSelectedSource(source);
     setIsDeleteModalOpen(true);
+  };
+
+  const handleTestClick = (source: DataSource) => {
+    setSelectedSource(source);
+    setTestResult(null);
+    setIsTestModalOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
     if (!selectedSource) return;
 
     setSubmitting(true);
-    const response = await apiClient.delete(`/whatsapp/sources/${selectedSource.id}`);
+    const response = await apiClient.delete(`/datasources/${selectedSource.id}`);
     setSubmitting(false);
 
     if (response.error) {
@@ -119,13 +130,36 @@ export function SourcesPage() {
     }
   };
 
+  const handleTest = async () => {
+    if (!selectedSource || !testTenantId) {
+      toast.error('Selecione um tenant para testar');
+      return;
+    }
+
+    setTesting(true);
+    setTestResult(null);
+
+    const response = await apiClient.post<DataSourceTestResult>(`/datasources/${selectedSource.id}/test`, {
+      tenantId: testTenantId,
+    });
+
+    setTesting(false);
+
+    if (response.error) {
+      toast.error(response.error.message);
+    } else if (response.data) {
+      setTestResult(response.data);
+      if (response.data.success) {
+        toast.success(`Query executada em ${response.data.duration}ms`);
+      } else {
+        toast.error(`Erro HTTP ${response.data.httpStatus}`);
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.tenantId) {
-      toast.error('Selecione um tenant');
-      return;
-    }
     if (!formData.name.trim()) {
       toast.error('Nome é obrigatório');
       return;
@@ -135,8 +169,11 @@ export function SourcesPage() {
       return;
     }
 
-    // Validar JSON
+    // Validate JSON fields
     let apiParams = {};
+    let apiHeaders = {};
+    let responseMapping = {};
+
     try {
       apiParams = JSON.parse(formData.apiParams);
     } catch {
@@ -144,15 +181,37 @@ export function SourcesPage() {
       return;
     }
 
+    try {
+      apiHeaders = JSON.parse(formData.apiHeaders);
+    } catch {
+      toast.error('Headers da API devem ser um JSON válido');
+      return;
+    }
+
+    try {
+      responseMapping = JSON.parse(formData.responseMapping);
+    } catch {
+      toast.error('Mapeamento de resposta deve ser um JSON válido');
+      return;
+    }
+
     setSubmitting(true);
     const payload = {
-      ...formData,
-      apiParams,
+      name: formData.name,
+      description: formData.description || undefined,
+      apiModule: formData.apiModule,
+      apiMethod: formData.apiMethod,
+      apiEndpoint: formData.apiEndpoint,
+      apiParams: Object.keys(apiParams).length > 0 ? apiParams : undefined,
+      apiHeaders: Object.keys(apiHeaders).length > 0 ? apiHeaders : undefined,
+      responseDataPath: formData.responseDataPath || undefined,
+      responseMapping: Object.keys(responseMapping).length > 0 ? responseMapping : undefined,
+      isActive: formData.isActive,
     };
 
     const response = selectedSource
-      ? await apiClient.put(`/whatsapp/sources/${selectedSource.id}`, payload)
-      : await apiClient.post('/whatsapp/sources', payload);
+      ? await apiClient.put(`/datasources/${selectedSource.id}`, payload)
+      : await apiClient.post('/datasources', payload);
     setSubmitting(false);
 
     if (response.error) {
@@ -164,49 +223,52 @@ export function SourcesPage() {
     }
   };
 
-  // Preencher endpoint padrão baseado no tipo
-  const handleSourceTypeChange = (type: SourceType) => {
-    let apiModule = 'sign';
-    let apiEndpoint = '/sign/queries/listEnvelopes';
-    let apiParams = '{\n  "status": ["PENDING_SIGNATURE"],\n  "limit": 100\n}';
+  const handlePresetSelect = (preset: DataSourcePreset) => {
+    setFormData({
+      name: preset.name,
+      description: preset.description,
+      apiModule: preset.apiModule,
+      apiMethod: preset.apiMethod as 'GET' | 'POST',
+      apiEndpoint: preset.apiEndpoint,
+      apiParams: JSON.stringify(preset.apiParams, null, 2),
+      apiHeaders: '{}',
+      responseDataPath: preset.responseDataPath,
+      responseMapping: '{}',
+      isActive: true,
+    });
+    setIsPresetsModalOpen(false);
+    setIsModalOpen(true);
+  };
 
-    switch (type) {
-      case 'sign':
-        apiModule = 'sign';
-        apiEndpoint = '/sign/queries/listEnvelopes';
-        apiParams = '{\n  "status": ["PENDING_SIGNATURE"],\n  "limit": 100\n}';
-        break;
-      case 'ged':
-      case 'ged_folder':
-        apiModule = 'ecm_ged';
-        apiEndpoint = '/ecm_ged/queries/getSignedDocuments';
-        apiParams = '{\n  "limit": 100\n}';
-        break;
-      case 'admission':
-        apiModule = 'hcm';
-        apiEndpoint = '/hcm/queries/listAdmissions';
-        apiParams = '{\n  "status": "PENDING",\n  "limit": 100\n}';
-        break;
-      case 'custom':
-        apiModule = '';
-        apiEndpoint = '';
-        apiParams = '{}';
-        break;
+  const getStatusBadge = (source: DataSource) => {
+    if (!source.lastTestedAt) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+          <Clock className="h-3 w-3" />
+          Não testado
+        </span>
+      );
     }
-
-    setFormData(prev => ({
-      ...prev,
-      sourceType: type,
-      apiModule,
-      apiEndpoint,
-      apiParams,
-    }));
+    if (source.lastTestStatus === 'SUCCESS') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+          <CheckCircle className="h-3 w-3" />
+          Sucesso
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+        <XCircle className="h-3 w-3" />
+        Erro
+      </span>
+    );
   };
 
   const columns = [
     {
       header: 'Nome',
-      accessor: (row: WhatsAppSource) => (
+      accessor: (row: DataSource) => (
         <div className="flex items-center gap-3">
           <div className="h-9 w-9 rounded-lg bg-purple-100 flex items-center justify-center">
             <Database className="h-5 w-5 text-purple-600" />
@@ -219,35 +281,39 @@ export function SourcesPage() {
       ),
     },
     {
-      header: 'Tipo',
-      accessor: (row: WhatsAppSource) => (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
-          {sourceTypeLabels[row.sourceType]}
-        </span>
-      ),
-    },
-    {
-      header: 'Tenant',
-      accessor: (row: WhatsAppSource) => (
-        <span className="text-sm text-slate-600">
-          {row.tenant?.name || tenants.find(t => t.id === row.tenantId)?.name || '-'}
+      header: 'Módulo',
+      accessor: (row: DataSource) => (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+          {row.apiModule}
         </span>
       ),
     },
     {
       header: 'Endpoint',
-      accessor: (row: WhatsAppSource) => (
-        <code className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-600">
+      accessor: (row: DataSource) => (
+        <code className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-600 max-w-[200px] truncate block">
           {row.apiEndpoint}
         </code>
       ),
     },
     {
+      header: 'Último Teste',
+      accessor: (row: DataSource) => getStatusBadge(row),
+    },
+    {
+      header: 'Regras',
+      accessor: (row: DataSource) => (
+        <span className="text-sm text-slate-600">
+          {row._count?.rules || 0}
+        </span>
+      ),
+    },
+    {
       header: 'Status',
-      accessor: (row: WhatsAppSource) => (
+      accessor: (row: DataSource) => (
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-          row.isActive 
-            ? 'bg-green-100 text-green-700' 
+          row.isActive
+            ? 'bg-green-100 text-green-700'
             : 'bg-slate-100 text-slate-500'
         }`}>
           {row.isActive ? 'Ativo' : 'Inativo'}
@@ -256,8 +322,15 @@ export function SourcesPage() {
     },
     {
       header: 'Ações',
-      accessor: (row: WhatsAppSource) => (
+      accessor: (row: DataSource) => (
         <div className="flex items-center gap-1">
+          <button
+            onClick={() => handleTestClick(row)}
+            className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+            title="Testar Query"
+          >
+            <Play className="h-4 w-4" />
+          </button>
           <button
             onClick={() => handleEdit(row)}
             className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
@@ -269,6 +342,7 @@ export function SourcesPage() {
             onClick={() => handleDeleteClick(row)}
             className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             title="Excluir"
+            disabled={row._count && row._count.rules > 0}
           >
             <Trash2 className="h-4 w-4" />
           </button>
@@ -284,29 +358,19 @@ export function SourcesPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <p className="text-slate-600">
-              Configure de onde buscar os dados para envio de mensagens WhatsApp.
+              Configure fontes de dados reutilizáveis para buscar informações das APIs Senior.
             </p>
           </div>
-          <Button onClick={handleCreate}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Fonte
-          </Button>
-        </div>
-
-        {/* Filtros */}
-        <div className="flex items-center gap-4">
-          <select
-            value={selectedTenantFilter}
-            onChange={(e) => setSelectedTenantFilter(e.target.value)}
-            className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-          >
-            <option value="">Todos os tenants</option>
-            {tenants.map((tenant) => (
-              <option key={tenant.id} value={tenant.id}>
-                {tenant.name}
-              </option>
-            ))}
-          </select>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={() => setIsPresetsModalOpen(true)}>
+              <Sparkles className="h-4 w-4 mr-2" />
+              Usar Preset
+            </Button>
+            <Button onClick={handleCreate}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Fonte
+            </Button>
+          </div>
         </div>
 
         {/* Tabela */}
@@ -316,13 +380,60 @@ export function SourcesPage() {
           loading={loading}
           emptyMessage="Nenhuma fonte de dados cadastrada"
           emptyAction={
-            <Button onClick={handleCreate} variant="secondary">
-              <Plus className="h-4 w-4 mr-2" />
-              Criar primeira fonte
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={() => setIsPresetsModalOpen(true)} variant="secondary">
+                <Sparkles className="h-4 w-4 mr-2" />
+                Usar Preset
+              </Button>
+              <Button onClick={handleCreate}>
+                <Plus className="h-4 w-4 mr-2" />
+                Criar fonte
+              </Button>
+            </div>
           }
         />
       </div>
+
+      {/* Modal de Presets */}
+      <Modal
+        isOpen={isPresetsModalOpen}
+        onClose={() => setIsPresetsModalOpen(false)}
+        title="Presets de Fontes de Dados"
+        size="lg"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Selecione um preset para criar rapidamente uma fonte de dados pré-configurada.
+          </p>
+          <div className="grid gap-3 max-h-[60vh] overflow-y-auto">
+            {presets.map((preset) => (
+              <button
+                key={preset.id}
+                onClick={() => handlePresetSelect(preset)}
+                className="w-full text-left p-4 border border-slate-200 rounded-lg hover:border-primary hover:bg-primary/5 transition-colors"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+                    <Database className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-slate-900">{preset.name}</div>
+                    <div className="text-sm text-slate-500 mt-0.5">{preset.description}</div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                        {preset.apiModule}
+                      </span>
+                      <code className="text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-600">
+                        {preset.apiEndpoint}
+                      </code>
+                    </div>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </Modal>
 
       {/* Modal de Criação/Edição */}
       <Modal
@@ -332,49 +443,11 @@ export function SourcesPage() {
         size="lg"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Tenant *
-              </label>
-              <select
-                value={formData.tenantId}
-                onChange={(e) => setFormData({ ...formData, tenantId: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-                required
-              >
-                <option value="">Selecione...</option>
-                {tenants.map((tenant) => (
-                  <option key={tenant.id} value={tenant.id}>
-                    {tenant.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Tipo de Fonte *
-              </label>
-              <select
-                value={formData.sourceType}
-                onChange={(e) => handleSourceTypeChange(e.target.value as SourceType)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-              >
-                {SOURCE_TYPE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
           <Input
-            label="Nome da Fonte"
+            label="Nome da Fonte *"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            placeholder="Ex: Documentos Pendentes de Assinatura"
+            placeholder="Ex: Envelopes Pendentes de Assinatura"
             required
           />
 
@@ -415,7 +488,7 @@ export function SourcesPage() {
                 </label>
                 <select
                   value={formData.apiMethod}
-                  onChange={(e) => setFormData({ ...formData, apiMethod: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, apiMethod: e.target.value as 'GET' | 'POST' })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                 >
                   <option value="POST">POST</option>
@@ -433,23 +506,37 @@ export function SourcesPage() {
             </div>
 
             <Input
-              label="Endpoint"
+              label="Endpoint *"
               value={formData.apiEndpoint}
               onChange={(e) => setFormData({ ...formData, apiEndpoint: e.target.value })}
-              placeholder="/sign/queries/listEnvelopes"
+              placeholder="queries/listEnvelopes"
+              hint="Caminho relativo ao módulo (sem barra inicial)"
               required
             />
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Parâmetros (JSON)
+                Parâmetros do Body/Query (JSON)
               </label>
               <textarea
                 value={formData.apiParams}
                 onChange={(e) => setFormData({ ...formData, apiParams: e.target.value })}
                 rows={5}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none font-mono text-sm"
-                placeholder='{"status": ["PENDING_SIGNATURE"]}'
+                placeholder='{"status": ["PENDING"], "limit": 50}'
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                Headers Adicionais (JSON)
+              </label>
+              <textarea
+                value={formData.apiHeaders}
+                onChange={(e) => setFormData({ ...formData, apiHeaders: e.target.value })}
+                rows={2}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none font-mono text-sm"
+                placeholder='{}'
               />
             </div>
           </div>
@@ -478,6 +565,110 @@ export function SourcesPage() {
         </form>
       </Modal>
 
+      {/* Modal de Teste */}
+      <Modal
+        isOpen={isTestModalOpen}
+        onClose={() => setIsTestModalOpen(false)}
+        title={`Testar Query: ${selectedSource?.name || ''}`}
+        size="xl"
+      >
+        <div className="space-y-4">
+          <div className="bg-slate-50 rounded-lg p-4">
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Tenant para teste *
+                </label>
+                <select
+                  value={testTenantId}
+                  onChange={(e) => setTestTenantId(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                >
+                  <option value="">Selecione um tenant...</option>
+                  {tenants.map((tenant) => (
+                    <option key={tenant.id} value={tenant.id}>
+                      {tenant.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-slate-500 mt-1">
+                  As credenciais do tenant selecionado serão usadas para autenticar na API Senior.
+                </p>
+              </div>
+              <Button onClick={handleTest} loading={testing} disabled={!testTenantId}>
+                <Play className="h-4 w-4 mr-2" />
+                Executar
+              </Button>
+            </div>
+          </div>
+
+          {testResult && (
+            <div className="space-y-4">
+              {/* Status */}
+              <div className={`rounded-lg p-4 ${testResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {testResult.success ? (
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                    ) : (
+                      <XCircle className="h-5 w-5 text-red-600" />
+                    )}
+                    <span className={`font-medium ${testResult.success ? 'text-green-700' : 'text-red-700'}`}>
+                      HTTP {testResult.httpStatus}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm text-slate-600">
+                    <span>{testResult.duration}ms</span>
+                    {testResult.recordCount !== null && (
+                      <span className="font-medium">{testResult.recordCount} registros</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Request Info */}
+              <div>
+                <h4 className="text-sm font-medium text-slate-700 mb-2">Requisição</h4>
+                <div className="bg-slate-900 rounded-lg p-3 text-sm">
+                  <div className="text-green-400 font-mono">
+                    {testResult.method} {testResult.url}
+                  </div>
+                  {Object.keys(testResult.requestBody).length > 0 && (
+                    <pre className="text-slate-300 mt-2 text-xs overflow-x-auto">
+                      {JSON.stringify(testResult.requestBody, null, 2)}
+                    </pre>
+                  )}
+                </div>
+              </div>
+
+              {/* Response */}
+              <div>
+                <h4 className="text-sm font-medium text-slate-700 mb-2">Resposta</h4>
+                <div className="bg-slate-900 rounded-lg p-3">
+                  <pre className="text-slate-300 text-xs overflow-x-auto max-h-64">
+                    {JSON.stringify(testResult.response, null, 2)}
+                  </pre>
+                </div>
+              </div>
+
+              {/* Extracted Data */}
+              {testResult.extractedData && (
+                <div>
+                  <h4 className="text-sm font-medium text-slate-700 mb-2">
+                    Dados Extraídos ({selectedSource?.responseDataPath || 'root'})
+                  </h4>
+                  <div className="bg-slate-900 rounded-lg p-3">
+                    <pre className="text-slate-300 text-xs overflow-x-auto max-h-64">
+                      {JSON.stringify(testResult.extractedData, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </Modal>
+
       {/* Modal de Confirmação de Exclusão */}
       <Modal
         isOpen={isDeleteModalOpen}
@@ -494,8 +685,13 @@ export function SourcesPage() {
                 Excluir fonte "{selectedSource?.name}"?
               </p>
               <p className="text-sm text-slate-500 mt-1">
-                Esta ação não pode ser desfeita. Jobs que usam esta fonte serão afetados.
+                Esta ação não pode ser desfeita. Regras que usam esta fonte serão desvinculadas.
               </p>
+              {selectedSource?._count && selectedSource._count.rules > 0 && (
+                <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-700">
+                  Esta fonte está sendo usada por {selectedSource._count.rules} regra(s).
+                </div>
+              )}
             </div>
           </div>
 
@@ -503,7 +699,13 @@ export function SourcesPage() {
             <Button type="button" variant="secondary" onClick={() => setIsDeleteModalOpen(false)}>
               Cancelar
             </Button>
-            <Button type="button" variant="danger" onClick={handleDeleteConfirm} loading={submitting}>
+            <Button
+              type="button"
+              variant="danger"
+              onClick={handleDeleteConfirm}
+              loading={submitting}
+              disabled={selectedSource?._count && selectedSource._count.rules > 0}
+            >
               Excluir
             </Button>
           </div>
