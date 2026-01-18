@@ -21,7 +21,6 @@ export interface PollResult {
 export interface SeniorConnectorConfig {
   baseUrl: string;
   authToken: string;
-  demoMode: boolean;
 }
 
 export class SeniorConnector {
@@ -47,7 +46,6 @@ export class SeniorConnector {
     return new SeniorConnector({
       baseUrl: credentials.baseUrl,
       authToken: credentials.authToken,
-      demoMode: credentials.demoMode,
     }, prisma);
   }
 
@@ -58,15 +56,6 @@ export class SeniorConnector {
     body?: Record<string, any>,
     timeout: number = 30000
   ): Promise<{ success: boolean; data?: T; error?: string; status?: number }> {
-    // Se modo demo, não faz request real
-    if (this.config.demoMode) {
-      console.log(`🎭 [DEMO] Request ignorado: ${method} ${path}`);
-      return {
-        success: true,
-        data: { demo: true, path } as any,
-      };
-    }
-
     const url = `${this.config.baseUrl}${path}`;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -124,11 +113,6 @@ export class SeniorConnector {
     strategy: string,
     params?: Record<string, any>
   ): Promise<PollResult> {
-    // Modo demo: gerar eventos fake
-    if (this.config.demoMode) {
-      return this.generateDemoEvents(endpointPath);
-    }
-
     try {
       // Estratégia SIMPLE: apenas GET/POST no endpoint
       if (strategy === 'SIMPLE') {
@@ -251,79 +235,6 @@ export class SeniorConnector {
     if (endpointPath.includes('ecm_ged')) return 'DOCUMENT';
     if (endpointPath.includes('envelope')) return 'ENVELOPE';
     return 'GENERIC';
-  }
-
-  // Gerar eventos fake para modo demo
-  private generateDemoEvents(endpointPath: string): PollResult {
-    const eventType = this.inferEventType(endpointPath);
-    const count = Math.floor(Math.random() * 3) + 1; // 1-3 eventos
-
-    console.log(`🎭 [DEMO] Gerando ${count} eventos fake para ${endpointPath}`);
-
-    const events: SeniorEvent[] = [];
-
-    for (let i = 0; i < count; i++) {
-      const event = this.generateDemoEvent(eventType, i);
-      events.push(event);
-    }
-
-    return {
-      success: true,
-      events,
-    };
-  }
-
-  private generateDemoEvent(type: string, index: number): SeniorEvent {
-    const names = ['João Silva', 'Maria Santos', 'Pedro Oliveira', 'Ana Costa', 'Carlos Lima'];
-    const name = names[Math.floor(Math.random() * names.length)];
-    const phone = `55119${Math.floor(Math.random() * 90000000) + 10000000}`;
-
-    const baseEvent = {
-      id: `demo-${Date.now()}-${index}`,
-      type,
-      timestamp: new Date(),
-    };
-
-    switch (type) {
-      case 'SIGNATURE':
-        return {
-          ...baseEvent,
-          data: {
-            envelopeId: `env-${Date.now()}-${index}`,
-            envelopeName: `Contrato de Trabalho - ${name}`,
-            status: 'PENDING_SIGNATURE',
-            signerName: name,
-            signerEmail: `${name.toLowerCase().replace(' ', '.')}@example.com`,
-            signerPhone: phone,
-            createdDate: new Date().toISOString(),
-            expirationDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          },
-        };
-
-      case 'DOCUMENT':
-        return {
-          ...baseEvent,
-          data: {
-            documentId: `doc-${Date.now()}-${index}`,
-            documentName: `Documento ${index + 1} - ${name}`,
-            folderName: 'RH/Contratos',
-            authorName: name,
-            authorPhone: phone,
-            createdDate: new Date().toISOString(),
-          },
-        };
-
-      default:
-        return {
-          ...baseEvent,
-          data: {
-            eventId: `evt-${Date.now()}-${index}`,
-            description: `Evento genérico ${index + 1}`,
-            userName: name,
-            userPhone: phone,
-          },
-        };
-    }
   }
 
   // ========================================
