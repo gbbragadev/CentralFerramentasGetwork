@@ -7,93 +7,28 @@ import { z } from 'zod';
 import { prisma } from '../index.js';
 import { success, send404, apiError, ErrorCodes } from '../lib/response.js';
 import { resolvePath } from '../utils/dataPaths.js';
-import { buildFilterEvaluator } from '../utils/filters.js';
+import { extractPlaceholders, renderTemplate } from '../utils/templateRenderer.js';
 import { modulePresets } from '../modules/data-sources/modulePresets.js';
 
 const templateSchema = z.object({
-  name: z.string().min(1, 'Nome obrigatório'),
+  name: z.string().min(1, 'Nome obrigatorio'),
   description: z.string().optional(),
   dataSourceId: z.string().uuid().optional().nullable(),
-  messageBody: z.string().min(1, 'Corpo da mensagem obrigatório'),
-  recipientField: z.string().default('signers[].phoneNumber'),
-  recipientNameField: z.string().optional().nullable(),
-  signUrlEnabled: z.boolean().default(true),
-  signUrlBaseField: z.string().optional().nullable(),
-  signUrlTemplate: z.string().optional().nullable(),
-  iterateOverField: z.string().optional().nullable(),
-  filterExpression: z.string().optional().nullable(),
+  messageBody: z.string().min(1, 'Corpo da mensagem obrigatorio'),
   isActive: z.boolean().default(true),
 });
 
 const previewSchema = z.object({
-  tenantId: z.string().uuid('ID do tenant inválido'),
-  sampleData: z.record(z.any()).optional(),
+  tenantId: z.string().uuid('ID do tenant invalido'),
 });
 
-// Função para extrair placeholders de um template
-function extractPlaceholders(template: string): string[] {
-  const regex = /\{\{([^}]+)\}\}/g;
-  const placeholders: string[] = [];
-  let match;
-  while ((match = regex.exec(template)) !== null) {
-    placeholders.push(match[1].trim());
+function buildSeniorUrl(apiModule: string, apiEndpoint: string): string {
+  const baseUrl = 'https://platform.senior.com.br/t/senior.com.br/bridge/1.0/rest/platform';
+  const endpoint = apiEndpoint.startsWith('/') ? apiEndpoint.slice(1) : apiEndpoint;
+  if (endpoint.startsWith(apiModule)) {
+    return `${baseUrl}/${endpoint}`;
   }
-  return [...new Set(placeholders)];
-}
-
-// Função para substituir placeholders por valores
-function renderTemplate(template: string, data: Record<string, any>): string {
-  return template.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
-    const value = resolvePath(data, path.trim());
-    if (value === undefined || value === null) {
-      return match;
-    }
-    if (Array.isArray(value)) {
-      return value.map((item) => String(item)).join(', ');
-    }
-    if (typeof value === 'object') {
-      return JSON.stringify(value);
-    }
-    return String(value);
-  });
-}
-
-function normalizeIteratePath(path?: string | null) {
-  if (!path) {
-    return '';
-  }
-  return path.endsWith('[]') ? path.slice(0, -2) : path;
-}
-
-function stripIteratePrefix(path: string, iterateOverField?: string | null) {
-  if (!iterateOverField) {
-    return path.replace(/\[\]\./g, '.').replace(/\[\]$/g, '');
-  }
-  const normalized = normalizeIteratePath(iterateOverField);
-  if (path.startsWith(`${normalized}[].`)) {
-    return path.slice(normalized.length + 3);
-  }
-  if (path.startsWith(`${normalized}.`)) {
-    return path.slice(normalized.length + 1);
-  }
-  return path;
-}
-
-function setPathValue(target: Record<string, any>, path: string, value: unknown) {
-  const normalized = normalizeIteratePath(path);
-  const parts = normalized.split('.').filter(Boolean);
-  if (parts.length === 0) {
-    return;
-  }
-  let current = target;
-  for (let i = 0; i < parts.length - 1; i += 1) {
-    const key = parts[i];
-    if (!current[key] || typeof current[key] !== 'object') {
-      current[key] = {};
-    }
-    current = current[key];
-  }
-  current[parts[parts.length - 1]] = value;
+  return `${baseUrl}/${apiModule}/${endpoint}`;
 }
 
 export async function templatesRoutes(app: FastifyInstance) {
@@ -166,6 +101,12 @@ export async function templatesRoutes(app: FastifyInstance) {
   app.post('/', async (request, reply) => {
     const body = templateSchema.parse(request.body);
 
+    if (!body.dataSourceId) {
+      return reply.status(400).send(
+        apiError(ErrorCodes.INVALID_INPUT, 'Fonte de dados obrigatoria')
+      );
+    }
+
     // Verificar se dataSource existe
     if (body.dataSourceId) {
       const dataSource = await prisma.dataSource.findUnique({
@@ -184,13 +125,6 @@ export async function templatesRoutes(app: FastifyInstance) {
         description: body.description,
         dataSourceId: body.dataSourceId,
         messageBody: body.messageBody,
-        recipientField: body.recipientField,
-        recipientNameField: body.recipientNameField,
-        signUrlEnabled: body.signUrlEnabled,
-        signUrlBaseField: body.signUrlBaseField,
-        signUrlTemplate: body.signUrlTemplate,
-        iterateOverField: body.iterateOverField,
-        filterExpression: body.filterExpression,
         isActive: body.isActive,
       },
       include: {
@@ -207,6 +141,12 @@ export async function templatesRoutes(app: FastifyInstance) {
   app.put('/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = templateSchema.partial().parse(request.body);
+
+    if (body.dataSourceId === null) {
+      return reply.status(400).send(
+        apiError(ErrorCodes.INVALID_INPUT, 'Fonte de dados obrigatoria')
+      );
+    }
 
     const existing = await prisma.messageTemplate.findUnique({ where: { id } });
     if (!existing) {
@@ -268,7 +208,6 @@ export async function templatesRoutes(app: FastifyInstance) {
     const { id } = request.params as { id: string };
     const body = previewSchema.parse(request.body);
 
-    // Buscar template
     const template = await prisma.messageTemplate.findUnique({
       where: { id },
       include: { dataSource: true },
@@ -278,178 +217,69 @@ export async function templatesRoutes(app: FastifyInstance) {
       return send404(reply, 'Template');
     }
 
-    // Se não tem DataSource vinculado, usar sampleData
     if (!template.dataSourceId || !template.dataSource) {
-      if (!body.sampleData) {
-        return reply.status(400).send(
-          apiError(ErrorCodes.INVALID_INPUT, 'Template sem fonte de dados. Forneça sampleData para preview.')
-        );
-      }
-
-      const rendered = renderTemplate(template.messageBody, body.sampleData);
-      const placeholders = extractPlaceholders(template.messageBody);
-
-      return success({
-        template: template.messageBody,
-        rendered,
-        placeholders,
-        sampleData: body.sampleData,
-        recipients: [],
-      });
+      return reply.status(400).send(
+        apiError(ErrorCodes.INVALID_INPUT, 'Template sem fonte de dados. Vincule uma fonte para preview.')
+      );
     }
 
-    // Buscar credenciais do tenant
     const credentials = await prisma.seniorCredentials.findUnique({
       where: { tenantId: body.tenantId },
     });
 
     if (!credentials || !credentials.authToken || credentials.authToken === 'PENDING_AUTH') {
       return reply.status(400).send(
-        apiError(ErrorCodes.CREDENTIALS_NOT_CONFIGURED, 'Credenciais Senior não configuradas ou token não disponível')
+        apiError(ErrorCodes.CREDENTIALS_NOT_CONFIGURED, 'Credenciais Senior nao configuradas ou token nao disponivel')
       );
     }
 
-    // Construir URL da API
-    const baseUrl = 'https://platform.senior.com.br/t/senior.com.br/bridge/1.0/rest/platform';
-    const endpoint = template.dataSource.apiEndpoint.startsWith('/')
-      ? template.dataSource.apiEndpoint.slice(1)
-      : template.dataSource.apiEndpoint;
-    const url = `${baseUrl}/${template.dataSource.apiModule}/${endpoint}`;
-
-    // Preparar headers
+    const url = buildSeniorUrl(template.dataSource.apiModule, template.dataSource.apiEndpoint);
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Authorization': credentials.authToken.startsWith('Bearer ')
         ? credentials.authToken
         : `Bearer ${credentials.authToken}`,
+      ...(template.dataSource.apiHeaders as Record<string, string> | null || {}),
     };
 
-    // Executar requisição
     const params = template.dataSource.apiParams || {};
-    let response: Response;
     let responseData: any;
 
     try {
-      response = await fetch(url, {
-        method: template.dataSource.apiMethod === 'GET' ? 'GET' : 'POST',
-        headers,
-        body: template.dataSource.apiMethod === 'POST' ? JSON.stringify(params) : undefined,
-      });
-      responseData = await response.json().catch(() => null);
+      if (template.dataSource.apiMethod === 'GET') {
+        const queryString = new URLSearchParams(params as Record<string, string>).toString();
+        const fullUrl = queryString ? `${url}?${queryString}` : url;
+        const response = await fetch(fullUrl, { method: 'GET', headers });
+        responseData = await response.json().catch(() => null);
+      } else {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(params),
+        });
+        responseData = await response.json().catch(() => null);
+      }
     } catch (error: any) {
-      return reply.status(500).send({
-        success: false,
-        error: 'REQUEST_FAILED',
-        message: error.message || 'Falha ao executar requisição',
-      });
+      return reply.status(500).send(
+        apiError(ErrorCodes.INTERNAL_ERROR, error.message || 'Falha ao executar requisicao')
+      );
     }
 
-    // Extrair dados usando o path configurado
     const extractedData = template.dataSource.responseDataPath
       ? resolvePath(responseData, template.dataSource.responseDataPath)
       : responseData;
 
-    // Pegar primeiro item se for array (para preview)
     const sampleItem = Array.isArray(extractedData) ? extractedData[0] : extractedData;
-
-    // Gerar preview
     const placeholders = extractPlaceholders(template.messageBody);
     const rendered = sampleItem ? renderTemplate(template.messageBody, sampleItem) : template.messageBody;
-
-    // Extrair destinatarios considerando iteracao e filtro
-    let recipients: any[] = [];
-    let filterError: string | null = null;
-    const evaluator = buildFilterEvaluator(template.filterExpression);
-
-    if (sampleItem) {
-      const items = template.iterateOverField
-        ? resolvePath(sampleItem, template.iterateOverField)
-        : Array.isArray(extractedData)
-          ? extractedData
-          : null;
-
-      if (Array.isArray(items)) {
-        const phonePath = stripIteratePrefix(template.recipientField, template.iterateOverField);
-        const namePath = template.recipientNameField
-          ? stripIteratePrefix(template.recipientNameField, template.iterateOverField)
-          : null;
-
-        recipients = items
-          .map((item: any, index: number) => {
-            if (evaluator) {
-              const result = evaluator(item);
-              if (result.error) {
-                filterError = result.error;
-              }
-              if (!result.matches) {
-                return null;
-              }
-            }
-
-            const phone = resolvePath(item, phonePath);
-            const name = namePath ? resolvePath(item, namePath) : null;
-            const itemContext = template.iterateOverField ? { ...sampleItem } : item;
-            if (template.iterateOverField) {
-              setPathValue(itemContext, template.iterateOverField, [item]);
-            }
-
-            return {
-              index,
-              phone: phone ? String(phone) : null,
-              name: name ? String(name) : null,
-              message: renderTemplate(template.messageBody, itemContext),
-            };
-          })
-          .filter(Boolean);
-      }
-    }
 
     return success({
       template: template.messageBody,
       rendered,
       placeholders,
-      sampleData: sampleItem,
+      sampleData: sampleItem ?? null,
       totalRecords: Array.isArray(extractedData) ? extractedData.length : (extractedData ? 1 : 0),
-      recipients,
-      filterError,
     });
   });
 
-  // ========================================
-  // GET /templates/placeholders - Lista placeholders comuns
-  // ========================================
-  app.get('/placeholders/common', async () => {
-    const commonPlaceholders = {
-      sign: {
-        envelope: [
-          { path: 'id', description: 'ID do envelope' },
-          { path: 'name', description: 'Nome do envelope' },
-          { path: 'status', description: 'Status (PENDING, SIGNED, etc)' },
-          { path: 'createdBy', description: 'Quem criou o envelope' },
-          { path: 'createdDate', description: 'Data de criação' },
-          { path: 'expirationDate', description: 'Data de expiração' },
-          { path: 'instructionsToSigner', description: 'Instruções para o assinante' },
-        ],
-        signer: [
-          { path: 'signers[0].name', description: 'Nome do signatário' },
-          { path: 'signers[0].email', description: 'Email do signatário' },
-          { path: 'signers[0].phoneNumber', description: 'Telefone do signatário' },
-          { path: 'signers[0].status', description: 'Status da assinatura' },
-        ],
-        document: [
-          { path: 'documents[0].originalFilename', description: 'Nome do arquivo' },
-          { path: 'documents[0].id', description: 'ID do documento' },
-        ],
-      },
-      special: [
-        { path: '{{signUrl}}', description: 'Link para assinatura (gerado automaticamente)' },
-        { path: '{{tenantName}}', description: 'Nome da empresa/tenant' },
-        { path: '{{currentDate}}', description: 'Data atual formatada' },
-      ],
-    };
-
-    return success(commonPlaceholders);
-  });
 }
-
-

@@ -386,7 +386,6 @@ export async function dataSourcesRoutes(app: FastifyInstance) {
       modulePreset.dataSourcePresets.map((preset) => ({
         ...preset,
         module: modulePreset.id,
-        defaultMappings: preset.defaultMappings || modulePreset.defaultMappings,
       }))
     );
 
@@ -403,7 +402,6 @@ export async function dataSourcesRoutes(app: FastifyInstance) {
       description: preset.description,
       apiModule: preset.apiModule,
       defaultDataSource: preset.defaultDataSource,
-      defaultMappings: preset.defaultMappings,
       endpoints: preset.endpoints,
     }));
 

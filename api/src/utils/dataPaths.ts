@@ -1,10 +1,12 @@
 type PathSegment =
   | { type: 'property'; key: string }
   | { type: 'index'; key: string; index: number }
+  | { type: 'arrayIndex'; index: number }
   | { type: 'wildcard'; key: string };
 
 const indexRegex = /^(\w+)\[(\d+)\]$/;
 const wildcardRegex = /^(\w+)\[\]$/;
+const arrayIndexRegex = /^\d+$/;
 
 function parseSegment(segment: string): PathSegment {
   const indexMatch = segment.match(indexRegex);
@@ -15,6 +17,10 @@ function parseSegment(segment: string): PathSegment {
   const wildcardMatch = segment.match(wildcardRegex);
   if (wildcardMatch) {
     return { type: 'wildcard', key: wildcardMatch[1] };
+  }
+
+  if (arrayIndexRegex.test(segment)) {
+    return { type: 'arrayIndex', index: Number(segment) };
   }
 
   return { type: 'property', key: segment };
@@ -42,6 +48,10 @@ export function resolvePath(source: unknown, path: string): unknown {
         const arrayValue = typedItem[segment.key];
         if (Array.isArray(arrayValue)) {
           next.push(arrayValue[segment.index]);
+        }
+      } else if (segment.type === 'arrayIndex') {
+        if (Array.isArray(item)) {
+          next.push(item[segment.index]);
         }
       } else {
         const arrayValue = typedItem[segment.key];

@@ -5,31 +5,14 @@ import { Table } from '@/components/Table';
 import { Modal } from '@/components/Modal';
 import { Input } from '@/components/Input';
 import { apiClient } from '@/api/client';
-import { MessageTemplate, MessageTemplatePreview, MessageTemplatePreset, DataSource, DataSourceTestResult, Tenant } from '@/api/types';
-import { Plus, Edit, Trash2, AlertTriangle, Eye, Database, Link2, MessageSquare, Play, Copy, Sparkles } from 'lucide-react';
+import { MessageTemplate, MessageTemplatePreview, MessageTemplatePreset, DataSource, DataSourceTestResult, DataSourceModulePreset, Tenant } from '@/api/types';
+import { Plus, Edit, Trash2, AlertTriangle, Eye, Database, MessageSquare, Play, Copy, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
-
-const COMMON_PLACEHOLDERS = {
-  envelope: [
-    { path: 'name', label: 'Nome do Envelope' },
-    { path: 'status', label: 'Status' },
-    { path: 'createdBy', label: 'Criado por' },
-    { path: 'createdDate', label: 'Data de Criação' },
-    { path: 'expirationDate', label: 'Data de Expiração' },
-  ],
-  signer: [
-    { path: 'signers[0].name', label: 'Nome do Signatário' },
-    { path: 'signers[0].email', label: 'Email' },
-    { path: 'signers[0].phoneNumber', label: 'Telefone' },
-  ],
-  document: [
-    { path: 'documents[0].originalFilename', label: 'Nome do Arquivo' },
-  ],
-};
 
 export function TemplatesPage() {
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
+  const [dataSourceModules, setDataSourceModules] = useState<DataSourceModulePreset[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [templatePresets, setTemplatePresets] = useState<MessageTemplatePreset[]>([]);
   const [selectedDataSource, setSelectedDataSource] = useState<DataSource | null>(null);
@@ -50,23 +33,18 @@ export function TemplatesPage() {
     description: '',
     dataSourceId: '' as string | null,
     messageBody: '',
-    recipientField: 'signers[].phoneNumber',
-    recipientNameField: '',
-    signUrlEnabled: true,
-    signUrlTemplate: '',
-    iterateOverField: 'signers',
-    filterExpression: '',
     isActive: true,
   });
 
   const loadData = async () => {
     setLoading(true);
 
-    const [templatesRes, dataSourcesRes, tenantsRes, presetsRes] = await Promise.all([
+    const [templatesRes, dataSourcesRes, tenantsRes, presetsRes, modulesRes] = await Promise.all([
       apiClient.get<MessageTemplate[]>('/templates'),
       apiClient.get<DataSource[]>('/datasources'),
       apiClient.get<Tenant[]>('/tenants?pageSize=100'),
       apiClient.get<MessageTemplatePreset[]>('/templates/presets'),
+      apiClient.get<DataSourceModulePreset[]>('/datasources/modules'),
     ]);
 
     if (templatesRes.data) setTemplates(templatesRes.data);
@@ -78,6 +56,7 @@ export function TemplatesPage() {
       }
     }
     if (presetsRes.data) setTemplatePresets(presetsRes.data);
+    if (modulesRes.data) setDataSourceModules(modulesRes.data);
 
     setLoading(false);
   };
@@ -90,30 +69,13 @@ export function TemplatesPage() {
     const dataSource = dataSources.find((ds) => ds.id === dataSourceId) || null;
     setSelectedDataSource(dataSource);
     setDataSourceTestResult(null);
-
-    if (!dataSource) {
-      setFormData((prev) => ({ ...prev, dataSourceId: null }));
-      return;
-    }
-
-    setFormData((prev) => ({
-      ...prev,
-      dataSourceId: dataSource.id,
-      recipientField: dataSource.defaultMappings?.defaultRecipients?.phonePath || prev.recipientField,
-      recipientNameField: dataSource.defaultMappings?.defaultRecipients?.namePath || prev.recipientNameField,
-      iterateOverField: dataSource.defaultMappings?.defaultRecipients?.iterateOverPath || prev.iterateOverField,
-      filterExpression: dataSource.defaultMappings?.defaultRecipients?.filterExpression || prev.filterExpression,
-    }));
+    setFormData((prev) => ({ ...prev, dataSourceId: dataSource ? dataSource.id : null }));
   };
 
   const applyTemplatePreset = (preset: MessageTemplatePreset) => {
     setFormData((prev) => ({
       ...prev,
       messageBody: preset.messageBody,
-      recipientField: preset.recipientField || prev.recipientField,
-      recipientNameField: preset.recipientNameField || prev.recipientNameField,
-      iterateOverField: preset.iterateOverField || prev.iterateOverField,
-      filterExpression: preset.filterExpression || prev.filterExpression,
     }));
   };
 
@@ -196,23 +158,7 @@ export function TemplatesPage() {
       name: '',
       description: '',
       dataSourceId: defaultDataSource?.id || null,
-      messageBody: `Olá {{signers[0].name}},
-
-Você tem um documento pendente de assinatura: *{{name}}*
-
-Acesse o link abaixo para assinar:
-{{signUrl}}
-
-Este documento expira em {{expirationDate}}.
-
-Atenciosamente,
-{{tenantName}}`,
-      recipientField: defaultDataSource?.defaultMappings?.defaultRecipients?.phonePath || 'signers[].phoneNumber',
-      recipientNameField: defaultDataSource?.defaultMappings?.defaultRecipients?.namePath || 'signers[].name',
-      signUrlEnabled: true,
-      signUrlTemplate: '',
-      iterateOverField: defaultDataSource?.defaultMappings?.defaultRecipients?.iterateOverPath || 'signers',
-      filterExpression: defaultDataSource?.defaultMappings?.defaultRecipients?.filterExpression || "status == 'PENDING'",
+      messageBody: '',
       isActive: true,
     });
     setDataSourceTestResult(null);
@@ -228,12 +174,6 @@ Atenciosamente,
       description: template.description || '',
       dataSourceId: template.dataSourceId,
       messageBody: template.messageBody,
-      recipientField: template.recipientField,
-      recipientNameField: template.recipientNameField || '',
-      signUrlEnabled: template.signUrlEnabled,
-      signUrlTemplate: template.signUrlTemplate || '',
-      iterateOverField: template.iterateOverField || '',
-      filterExpression: template.filterExpression || '',
       isActive: template.isActive,
     });
     setDataSourceTestResult(null);
@@ -274,7 +214,7 @@ Atenciosamente,
     }
 
     setPreviewLoading(true);
-    const response = await apiClient.post<MessageTemplatePreview>(`/templates/${selectedTemplate.id}/preview`, {
+    const response = await apiClient.post<MessageTemplatePreview>(`/whatsapp-templates/${selectedTemplate.id}/preview`, {
       tenantId: previewTenantId,
     });
     setPreviewLoading(false);
@@ -294,7 +234,11 @@ Atenciosamente,
       return;
     }
     if (!formData.messageBody.trim()) {
-      toast.error('Corpo da mensagem é obrigatório');
+      toast.error('Corpo da mensagem obrigatorio');
+      return;
+    }
+    if (!formData.dataSourceId) {
+      toast.error('Selecione uma fonte de dados');
       return;
     }
 
@@ -302,14 +246,8 @@ Atenciosamente,
     const payload = {
       name: formData.name,
       description: formData.description || undefined,
-      dataSourceId: formData.dataSourceId || null,
+      dataSourceId: formData.dataSourceId,
       messageBody: formData.messageBody,
-      recipientField: formData.recipientField,
-      recipientNameField: formData.recipientNameField || null,
-      signUrlEnabled: formData.signUrlEnabled,
-      signUrlTemplate: formData.signUrlTemplate || null,
-      iterateOverField: formData.iterateOverField || null,
-      filterExpression: formData.filterExpression || null,
       isActive: formData.isActive,
     };
 
@@ -346,6 +284,29 @@ Atenciosamente,
     }
   };
 
+  const suggestedPaths = (() => {
+    const paths: string[] = [];
+    const seen = new Set<string>();
+    const addPaths = (items?: string[] | null) => {
+      if (!items) return;
+      items.forEach((item) => {
+        if (!item || seen.has(item)) return;
+        seen.add(item);
+        paths.push(item);
+      });
+    };
+
+    addPaths(dataSourceTestResult?.detectedPaths);
+    addPaths(selectedDataSource?.lastTestPaths);
+
+    const modulePreset = selectedDataSource
+      ? dataSourceModules.find((module) => module.id === selectedDataSource.module)
+      : null;
+    addPaths(modulePreset?.defaultDataSource.availableFields);
+
+    return paths;
+  })();
+
   const columns = [
     {
       header: 'Nome',
@@ -372,14 +333,6 @@ Atenciosamente,
         ) : (
           <span className="text-sm text-slate-400">Nenhuma</span>
         )
-      ),
-    },
-    {
-      header: 'Destinatário',
-      accessor: (row: MessageTemplate) => (
-        <code className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-600">
-          {row.recipientField}
-        </code>
       ),
     },
     {
@@ -483,14 +436,14 @@ Atenciosamente,
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Fonte de Dados
+                Fonte de Dados *
               </label>
               <select
                 value={formData.dataSourceId || ''}
                 onChange={(e) => handleDataSourceChange(e.target.value || null)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
               >
-                <option value="">Nenhuma (usar dados manuais)</option>
+                <option value="">Selecione uma fonte...</option>
                 {dataSources.map((ds) => (
                   <option key={ds.id} value={ds.id}>
                     {ds.name} ({ds.module || ds.apiModule})
@@ -541,45 +494,23 @@ Atenciosamente,
             </label>
             <div className="flex flex-wrap gap-1 mb-2">
               <span className="text-xs text-slate-500 mr-2">Inserir:</span>
-              {COMMON_PLACEHOLDERS.envelope.slice(0, 3).map((p) => (
+              {suggestedPaths.slice(0, 12).map((path) => (
                 <button
-                  key={p.path}
+                  key={path}
                   type="button"
-                  onClick={() => insertPlaceholder(p.path)}
-                  className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                  onClick={() => insertPlaceholder(path)}
+                  className="text-xs px-2 py-0.5 bg-slate-100 text-slate-700 rounded hover:bg-slate-200"
                 >
-                  {p.label}
+                  {path}
                 </button>
               ))}
-              {COMMON_PLACEHOLDERS.signer.slice(0, 2).map((p) => (
-                <button
-                  key={p.path}
-                  type="button"
-                  onClick={() => insertPlaceholder(p.path)}
-                  className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded hover:bg-green-200"
-                >
-                  {p.label}
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={() => insertPlaceholder('signUrl')}
-                className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded hover:bg-purple-200"
-              >
-                Link Assinatura
-              </button>
-              {(dataSourceTestResult?.detectedPaths || selectedDataSource?.lastTestPaths || [])
-                .slice(0, 6)
-                .map((path) => (
-                  <button
-                    key={path}
-                    type="button"
-                    onClick={() => insertPlaceholder(path)}
-                    className="text-xs px-2 py-0.5 bg-slate-100 text-slate-700 rounded hover:bg-slate-200"
-                  >
-                    {path}
-                  </button>
-                ))}
+              {suggestedPaths.length === 0 && (
+                <span className="text-xs text-slate-400">
+                  {selectedDataSource
+                    ? 'Execute um teste para sugerir campos'
+                    : 'Selecione uma fonte para sugerir campos'}
+                </span>
+              )}
             </div>
             <textarea
               id="messageBody"
@@ -587,57 +518,14 @@ Atenciosamente,
               onChange={(e) => setFormData({ ...formData, messageBody: e.target.value })}
               rows={8}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none font-mono text-sm"
-              placeholder="Olá {{signers[0].name}}, você tem um documento pendente..."
+              placeholder="Ola {{name}}, sua mensagem aqui..."
               required
             />
             <p className="text-xs text-slate-500 mt-1">
-              Use {'{{campo}}'} para inserir valores dinâmicos. Ex: {'{{signers[0].name}}'}, {'{{name}}'}, {'{{signUrl}}'}
+              Use {'{{campo}}'} para inserir valores dinamicos. Ex: {'{{signers[0].name}}'}, {'{{signers.0.name}}'}, {'{{name}}'}
             </p>
           </div>
 
-          {/* Configurações de Destinatário */}
-          <div className="bg-slate-50 rounded-lg p-4 space-y-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <Link2 className="h-4 w-4" />
-              Configuração de Destinatário
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
-                label="Campo do Telefone"
-                value={formData.recipientField}
-                onChange={(e) => setFormData({ ...formData, recipientField: e.target.value })}
-                placeholder="signers[].phoneNumber"
-                hint="Caminho para o número de telefone"
-              />
-
-              <Input
-                label="Campo do Nome (opcional)"
-                value={formData.recipientNameField}
-                onChange={(e) => setFormData({ ...formData, recipientNameField: e.target.value })}
-                placeholder="signers[].name"
-                hint="Para personalização adicional"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
-                label="Iterar sobre"
-                value={formData.iterateOverField}
-                onChange={(e) => setFormData({ ...formData, iterateOverField: e.target.value })}
-                placeholder="signers"
-                hint="Campo array para enviar múltiplas mensagens"
-              />
-
-              <Input
-                label="Filtro (opcional)"
-                value={formData.filterExpression}
-                onChange={(e) => setFormData({ ...formData, filterExpression: e.target.value })}
-                placeholder="status == 'PENDING'"
-                hint="Expressão para filtrar destinatários"
-              />
-            </div>
-          </div>
 
           {selectedDataSource && (
             <div className="bg-slate-50 rounded-lg p-4 space-y-4">
@@ -707,33 +595,17 @@ Atenciosamente,
             </div>
           )}
 
-          {/* Link de Assinatura */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="signUrlEnabled"
-                checked={formData.signUrlEnabled}
-                onChange={(e) => setFormData({ ...formData, signUrlEnabled: e.target.checked })}
-                className="h-4 w-4 text-primary focus:ring-primary border-slate-300 rounded"
-              />
-              <label htmlFor="signUrlEnabled" className="text-sm text-slate-700">
-                Incluir link de assinatura
-              </label>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="isActive"
-                checked={formData.isActive}
-                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                className="h-4 w-4 text-primary focus:ring-primary border-slate-300 rounded"
-              />
-              <label htmlFor="isActive" className="text-sm text-slate-700">
-                Template ativo
-              </label>
-            </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="isActive"
+              checked={formData.isActive}
+              onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+              className="h-4 w-4 text-primary focus:ring-primary border-slate-300 rounded"
+            />
+            <label htmlFor="isActive" className="text-sm text-slate-700">
+              Template ativo
+            </label>
           </div>
 
           <div className="flex justify-end gap-2 pt-4 border-t">
@@ -811,33 +683,6 @@ Atenciosamente,
                 </div>
               </div>
 
-              {previewData.filterError && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
-                  Filtro invÃ¡lido: {previewData.filterError}
-                </div>
-              )}
-
-              {/* Destinatários */}
-              {previewData.recipients && previewData.recipients.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-medium text-slate-700 mb-2">
-                    Destinatários ({previewData.recipients.length})
-                  </h4>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {previewData.recipients.map((r, i) => (
-                      <div key={i} className="bg-slate-50 rounded p-3 text-sm">
-                        <div className="flex items-center gap-4 mb-2">
-                          <span className="font-medium">{r.name || 'Sem nome'}</span>
-                          <span className="text-slate-500">{r.phone || 'Sem telefone'}</span>
-                        </div>
-                        <div className="bg-white border rounded p-2 text-xs text-slate-600">
-                          {r.message.substring(0, 100)}...
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {/* Dados de Amostra */}
               <div>

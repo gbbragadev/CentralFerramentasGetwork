@@ -1,16 +1,3 @@
-export type DefaultRecipientsMapping = {
-  phonePath: string;
-  namePath?: string;
-  iterateOverPath?: string;
-  filterExpression?: string;
-};
-
-export type DefaultMappings = {
-  employeeNamePath?: string;
-  companyNamePath?: string;
-  defaultRecipients: DefaultRecipientsMapping;
-};
-
 export type DataSourcePreset = {
   id: string;
   name: string;
@@ -20,9 +7,9 @@ export type DataSourcePreset = {
   apiMethod: 'GET' | 'POST';
   apiEndpoint: string;
   apiParams: Record<string, unknown>;
+  apiHeaders?: Record<string, string>;
   responseDataPath?: string;
   availableFields?: string[];
-  defaultMappings?: DefaultMappings;
 };
 
 export type TemplatePreset = {
@@ -31,10 +18,6 @@ export type TemplatePreset = {
   description: string;
   module: string;
   messageBody: string;
-  recipientField?: string;
-  recipientNameField?: string;
-  iterateOverField?: string;
-  filterExpression?: string;
 };
 
 export type ModulePreset = {
@@ -45,7 +28,6 @@ export type ModulePreset = {
   defaultDataSource: Omit<DataSourcePreset, 'id' | 'module' | 'description'> & {
     description?: string;
   };
-  defaultMappings: DefaultMappings;
   dataSourcePresets: DataSourcePreset[];
   templatePresets: TemplatePreset[];
   endpoints: Array<{ path: string; name: string; method: 'GET' | 'POST' }>;
@@ -69,16 +51,18 @@ export const modulePresets: ModulePreset[] = [
         limit: 100,
       },
       responseDataPath: 'contents',
-    },
-    defaultMappings: {
-      employeeNamePath: 'signers[].name',
-      companyNamePath: 'createdBy',
-      defaultRecipients: {
-        phonePath: 'signers[].phoneNumber',
-        namePath: 'signers[].name',
-        iterateOverPath: 'signers',
-        filterExpression: "status == 'PENDING'",
-      },
+      availableFields: [
+        'id',
+        'name',
+        'status',
+        'createdBy',
+        'createdDate',
+        'expirationDate',
+        'signers[].name',
+        'signers[].email',
+        'signers[].phoneNumber',
+        'signers[].status',
+      ],
     },
     dataSourcePresets: [
       {
@@ -144,14 +128,8 @@ export const modulePresets: ModulePreset[] = [
 
 Existe um documento pendente de assinatura: *{{name}}*.
 
-Assine aqui: {{signUrl}}
-
 Atenciosamente,
 {{tenantName}}`,
-        recipientField: 'signers[].phoneNumber',
-        recipientNameField: 'signers[].name',
-        iterateOverField: 'signers',
-        filterExpression: "status == 'PENDING'",
       },
     ],
     endpoints: [
@@ -177,16 +155,7 @@ Atenciosamente,
         envelopeId: '{{envelopeId}}',
       },
       responseDataPath: '',
-    },
-    defaultMappings: {
-      employeeNamePath: 'signers[].name',
-      companyNamePath: '',
-      defaultRecipients: {
-        phonePath: 'signers[].phoneNumber',
-        namePath: 'signers[].name',
-        iterateOverPath: 'signers',
-        filterExpression: "status == 'PENDING'",
-      },
+      availableFields: ['envelopeId', 'status', 'isFinished', 'signers[].email', 'signers[].name', 'signers[].status'],
     },
     dataSourcePresets: [
       {
@@ -225,12 +194,7 @@ Atenciosamente,
         messageBody: `Ola {{signers[].name}},
 
 Voce tem um documento pendente no GED.
-
-Acesse: {{signUrl}}`,
-        recipientField: 'signers[].phoneNumber',
-        recipientNameField: 'signers[].name',
-        iterateOverField: 'signers',
-        filterExpression: "status == 'PENDING'",
+Status: {{status}}`,
       },
     ],
     endpoints: [
@@ -256,16 +220,7 @@ Acesse: {{signUrl}}`,
         limit: 100,
       },
       responseDataPath: 'contents',
-    },
-    defaultMappings: {
-      employeeNamePath: 'contents[].name',
-      companyNamePath: 'contents[].companyName',
-      defaultRecipients: {
-        phonePath: 'contents[].phoneNumber',
-        namePath: 'contents[].name',
-        iterateOverPath: 'contents',
-        filterExpression: '',
-      },
+      availableFields: ['id', 'name', 'email', 'phoneNumber', 'companyName'],
     },
     dataSourcePresets: [
       {
@@ -293,9 +248,6 @@ Acesse: {{signUrl}}`,
         messageBody: `Ola {{contents[].name}},
 
 Ha uma atualizacao na sua jornada de colaborador.`,
-        recipientField: 'contents[].phoneNumber',
-        recipientNameField: 'contents[].name',
-        iterateOverField: 'contents',
       },
     ],
     endpoints: [
@@ -319,16 +271,7 @@ Ha uma atualizacao na sua jornada de colaborador.`,
         limit: 100,
       },
       responseDataPath: 'contents',
-    },
-    defaultMappings: {
-      employeeNamePath: 'contents[].name',
-      companyNamePath: '',
-      defaultRecipients: {
-        phonePath: 'contents[].phoneNumber',
-        namePath: 'contents[].name',
-        iterateOverPath: 'contents',
-        filterExpression: '',
-      },
+      availableFields: ['id', 'name', 'email', 'phoneNumber'],
     },
     dataSourcePresets: [
       {
@@ -356,9 +299,6 @@ Ha uma atualizacao na sua jornada de colaborador.`,
         messageBody: `Ola {{contents[].name}},
 
 Voce possui uma atualizacao na plataforma.`,
-        recipientField: 'contents[].phoneNumber',
-        recipientNameField: 'contents[].name',
-        iterateOverField: 'contents',
       },
     ],
     endpoints: [
@@ -382,16 +322,7 @@ Voce possui uma atualizacao na plataforma.`,
         limit: 100,
       },
       responseDataPath: 'contents',
-    },
-    defaultMappings: {
-      employeeNamePath: '',
-      companyNamePath: '',
-      defaultRecipients: {
-        phonePath: 'contents[].phoneNumber',
-        namePath: 'contents[].name',
-        iterateOverPath: 'contents',
-        filterExpression: '',
-      },
+      availableFields: ['id', 'name', 'description'],
     },
     dataSourcePresets: [
       {

@@ -20,6 +20,7 @@ import { productsRoutes } from './routes/products.js';
 import { externalRoutes } from './routes/external.js';
 import { dataSourcesRoutes } from './routes/datasources.js';
 import { templatesRoutes } from './routes/templates.js';
+import { whatsappTemplatesRoutes } from './routes/whatsapp-templates.js';
 
 // Lib
 import { ErrorCodes, apiError, validationError } from './lib/response.js';
@@ -109,6 +110,7 @@ await app.register(productsRoutes, { prefix: '/products' });
 await app.register(externalRoutes, { prefix: '/external' });
 await app.register(dataSourcesRoutes, { prefix: '/datasources' });
 await app.register(templatesRoutes, { prefix: '/templates' });
+await app.register(whatsappTemplatesRoutes, { prefix: '/whatsapp-templates' });
 
 // Error handler global
 app.setErrorHandler((error, request, reply) => {

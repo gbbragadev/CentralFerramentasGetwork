@@ -5,7 +5,7 @@ import { Table } from '@/components/Table';
 import { Modal } from '@/components/Modal';
 import { Input } from '@/components/Input';
 import { apiClient } from '@/api/client';
-import { DataSource, DataSourceModule, DataSourceModulePreset, DataSourcePreset, DataSourceTestResult, DefaultMappings, Tenant } from '@/api/types';
+import { DataSource, DataSourceModule, DataSourceModulePreset, DataSourcePreset, DataSourceTestResult, Tenant } from '@/api/types';
 import { Plus, Edit, Trash2, Database, AlertTriangle, Code, Play, CheckCircle, XCircle, Clock, Sparkles, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -38,16 +38,6 @@ export function SourcesPage() {
     apiHeaders: '{}',
     responseDataPath: 'contents',
     responseMapping: '{}',
-    defaultMappings: {
-      employeeNamePath: '',
-      companyNamePath: '',
-      defaultRecipients: {
-        phonePath: 'signers[].phoneNumber',
-        namePath: 'signers[].name',
-        iterateOverPath: 'signers',
-        filterExpression: "status == 'PENDING'",
-      },
-    } as DefaultMappings,
     isActive: true,
   });
 
@@ -79,17 +69,6 @@ export function SourcesPage() {
     loadData();
   }, []);
 
-  const normalizeMappings = (mappings?: DefaultMappings | null): DefaultMappings => ({
-    employeeNamePath: mappings?.employeeNamePath || '',
-    companyNamePath: mappings?.companyNamePath || '',
-    defaultRecipients: {
-      phonePath: mappings?.defaultRecipients?.phonePath || '',
-      namePath: mappings?.defaultRecipients?.namePath || '',
-      iterateOverPath: mappings?.defaultRecipients?.iterateOverPath || '',
-      filterExpression: mappings?.defaultRecipients?.filterExpression || '',
-    },
-  });
-
   const findModulePreset = (moduleId: DataSourceModule) =>
     modules.find((module) => module.id === moduleId);
 
@@ -106,8 +85,8 @@ export function SourcesPage() {
       apiMethod: preset.defaultDataSource.apiMethod,
       apiEndpoint: preset.defaultDataSource.apiEndpoint,
       apiParams: JSON.stringify(preset.defaultDataSource.apiParams ?? {}, null, 2),
+      apiHeaders: JSON.stringify(preset.defaultDataSource.apiHeaders ?? {}, null, 2),
       responseDataPath: preset.defaultDataSource.responseDataPath || '',
-      defaultMappings: normalizeMappings(preset.defaultMappings),
     }));
     setFormTestResult(null);
   };
@@ -125,10 +104,9 @@ export function SourcesPage() {
         apiMethod: preset.defaultDataSource.apiMethod,
         apiEndpoint: preset.defaultDataSource.apiEndpoint,
         apiParams: JSON.stringify(preset.defaultDataSource.apiParams ?? {}, null, 2),
-        apiHeaders: '{}',
+        apiHeaders: JSON.stringify(preset.defaultDataSource.apiHeaders ?? {}, null, 2),
         responseDataPath: preset.defaultDataSource.responseDataPath || '',
         responseMapping: '{}',
-        defaultMappings: normalizeMappings(preset.defaultMappings),
         isActive: true,
       });
     } else {
@@ -143,7 +121,6 @@ export function SourcesPage() {
         apiHeaders: '{}',
         responseDataPath: 'contents',
         responseMapping: '{}',
-        defaultMappings: normalizeMappings(),
         isActive: true,
       });
     }
@@ -165,7 +142,6 @@ export function SourcesPage() {
       apiHeaders: source.apiHeaders ? JSON.stringify(source.apiHeaders, null, 2) : '{}',
       responseDataPath: source.responseDataPath || '',
       responseMapping: source.responseMapping ? JSON.stringify(source.responseMapping, null, 2) : '{}',
-      defaultMappings: normalizeMappings(source.defaultMappings || preset?.defaultMappings),
       isActive: source.isActive,
     });
     setFormTestResult(null);
@@ -265,19 +241,6 @@ export function SourcesPage() {
     }
 
     setSubmitting(true);
-    const mappingPhonePath = formData.defaultMappings.defaultRecipients.phonePath.trim();
-    const defaultMappings = mappingPhonePath
-      ? {
-          employeeNamePath: formData.defaultMappings.employeeNamePath?.trim() || null,
-          companyNamePath: formData.defaultMappings.companyNamePath?.trim() || null,
-          defaultRecipients: {
-            phonePath: mappingPhonePath,
-            namePath: formData.defaultMappings.defaultRecipients.namePath?.trim() || null,
-            iterateOverPath: formData.defaultMappings.defaultRecipients.iterateOverPath?.trim() || null,
-            filterExpression: formData.defaultMappings.defaultRecipients.filterExpression?.trim() || null,
-          },
-        }
-      : undefined;
 
     const payload = {
       name: formData.name,
@@ -290,7 +253,6 @@ export function SourcesPage() {
       apiHeaders: Object.keys(apiHeaders).length > 0 ? apiHeaders : undefined,
       responseDataPath: formData.responseDataPath || undefined,
       responseMapping: Object.keys(responseMapping).length > 0 ? responseMapping : undefined,
-      defaultMappings,
       isActive: formData.isActive,
     };
 
@@ -317,10 +279,9 @@ export function SourcesPage() {
       apiMethod: preset.apiMethod as 'GET' | 'POST',
       apiEndpoint: preset.apiEndpoint,
       apiParams: JSON.stringify(preset.apiParams, null, 2),
-      apiHeaders: '{}',
+      apiHeaders: JSON.stringify(preset.apiHeaders ?? {}, null, 2),
       responseDataPath: preset.responseDataPath,
       responseMapping: '{}',
-      defaultMappings: normalizeMappings(preset.defaultMappings),
       isActive: true,
     });
     setFormTestResult(null);
@@ -778,121 +739,6 @@ export function SourcesPage() {
             </div>
           </div>
 
-          <div className="bg-slate-50 rounded-lg p-4 space-y-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <Database className="h-4 w-4" />
-              Mapeamentos padrÃ£o
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
-                label="Caminho do Nome do Colaborador"
-                value={formData.defaultMappings.employeeNamePath || ''}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    defaultMappings: {
-                      ...formData.defaultMappings,
-                      employeeNamePath: e.target.value,
-                    },
-                  })
-                }
-                placeholder="signers[].name"
-                hint="Opcional, para uso em templates"
-              />
-              <Input
-                label="Caminho do Nome da Empresa"
-                value={formData.defaultMappings.companyNamePath || ''}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    defaultMappings: {
-                      ...formData.defaultMappings,
-                      companyNamePath: e.target.value,
-                    },
-                  })
-                }
-                placeholder="company.name"
-                hint="Opcional, para uso em templates"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
-                label="Telefone padrÃ£o"
-                value={formData.defaultMappings.defaultRecipients.phonePath || ''}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    defaultMappings: {
-                      ...formData.defaultMappings,
-                      defaultRecipients: {
-                        ...formData.defaultMappings.defaultRecipients,
-                        phonePath: e.target.value,
-                      },
-                    },
-                  })
-                }
-                placeholder="signers[].phoneNumber"
-              />
-              <Input
-                label="Nome padrÃ£o (opcional)"
-                value={formData.defaultMappings.defaultRecipients.namePath || ''}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    defaultMappings: {
-                      ...formData.defaultMappings,
-                      defaultRecipients: {
-                        ...formData.defaultMappings.defaultRecipients,
-                        namePath: e.target.value,
-                      },
-                    },
-                  })
-                }
-                placeholder="signers[].name"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
-                label="Iterar sobre"
-                value={formData.defaultMappings.defaultRecipients.iterateOverPath || ''}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    defaultMappings: {
-                      ...formData.defaultMappings,
-                      defaultRecipients: {
-                        ...formData.defaultMappings.defaultRecipients,
-                        iterateOverPath: e.target.value,
-                      },
-                    },
-                  })
-                }
-                placeholder="signers"
-                hint="Se a resposta for lista, informe o caminho"
-              />
-              <Input
-                label="Filtro padrÃ£o (opcional)"
-                value={formData.defaultMappings.defaultRecipients.filterExpression || ''}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    defaultMappings: {
-                      ...formData.defaultMappings,
-                      defaultRecipients: {
-                        ...formData.defaultMappings.defaultRecipients,
-                        filterExpression: e.target.value,
-                      },
-                    },
-                  })
-                }
-                placeholder="status == 'PENDING'"
-                hint="ExpressÃ£o simples para filtrar itens"
-              />
-            </div>
-          </div>
 
           <div className="bg-slate-50 rounded-lg p-4 space-y-4">
             <div className="flex items-center justify-between gap-4">

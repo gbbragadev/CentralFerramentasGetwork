@@ -275,9 +275,9 @@ export interface DataSourcePreset {
   apiMethod: string;
   apiEndpoint: string;
   apiParams: Record<string, unknown>;
+  apiHeaders?: Record<string, string>;
   responseDataPath: string;
   availableFields?: string[];
-  defaultMappings?: DefaultMappings;
 }
 
 export interface DataSourceTestResult {
@@ -305,9 +305,10 @@ export interface DataSourceModulePreset {
     apiMethod: 'GET' | 'POST';
     apiEndpoint: string;
     apiParams: Record<string, unknown>;
+    apiHeaders?: Record<string, string>;
     responseDataPath?: string;
+    availableFields?: string[];
   };
-  defaultMappings: DefaultMappings;
   endpoints: Array<{ path: string; name: string; method: 'GET' | 'POST' }>;
 }
 
@@ -320,25 +321,12 @@ export interface MessageTemplate {
   name: string;
   description: string | null;
 
-  // Vínculo com fonte de dados
+  // V?nculo com fonte de dados
   dataSourceId: string | null;
   dataSource?: DataSource | null;
 
   // Corpo da mensagem com placeholders
   messageBody: string;
-
-  // Configuração do destinatário
-  recipientField: string;
-  recipientNameField: string | null;
-
-  // Configuração do link de assinatura
-  signUrlEnabled: boolean;
-  signUrlBaseField: string | null;
-  signUrlTemplate: string | null;
-
-  // Iteração sobre array
-  iterateOverField: string | null;
-  filterExpression: string | null;
 
   // Status
   isActive: boolean;
@@ -351,7 +339,7 @@ export interface MessageTemplate {
     rules: number;
   };
 
-  // Placeholders extraídos (retornado em GET /:id)
+  // Placeholders extra?dos (retornado em GET /:id)
   placeholders?: string[];
 }
 
@@ -359,15 +347,8 @@ export interface MessageTemplatePreview {
   template: string;
   rendered: string;
   placeholders: string[];
-  sampleData: Record<string, unknown>;
+  sampleData: Record<string, unknown> | null;
   totalRecords?: number;
-  recipients?: Array<{
-    index: number;
-    phone: string | null;
-    name: string | null;
-    message: string;
-  }>;
-  filterError?: string | null;
 }
 
 export interface MessageTemplatePreset {
@@ -376,10 +357,6 @@ export interface MessageTemplatePreset {
   description: string;
   module: DataSourceModule;
   messageBody: string;
-  recipientField?: string;
-  recipientNameField?: string;
-  iterateOverField?: string;
-  filterExpression?: string;
 }
 
 // ============================================================================

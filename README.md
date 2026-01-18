@@ -123,15 +123,16 @@ Acesse: http://localhost:3000
 - `PUT /tenants/:id/senior-credentials` - Atualizar credenciais
 
 ### **Fontes de Dados (Data Sources)**
-- Campo `module` define o mÃ³dulo Senior (ex.: PLATFORM_SIGN, HCM_GED) e aplica presets automÃ¡ticos.
+- Campo `module` aplica presets automaticos (apiModule, metodo, endpoint, body/params, headers, responseDataPath).
 - `POST /datasources/test` - Testar query sem salvar (usa `tenantId` + config ou `dataSourceId`).
-- `POST /datasources/:id/test` - Testar query e salvar o Ãºltimo resultado/paths.
-- `GET /datasources/modules` - Lista mÃ³dulos e defaults.
+- `POST /datasources/:id/test` - Testar query e salvar o ultimo resultado/paths.
+- `GET /datasources/modules` - Lista modulos e defaults/sugestoes de campos.
 
 ### **Templates WhatsApp**
-- Placeholders usam `{{path}}` com dot notation: `signers[].name`, `envelope.id`.
-- Arrays: `arr[]` indica todos os itens; `iterateOverField` envia item-a-item.
-- Filtros: expressÃ£o simples como `status == 'PENDING'` (sem `eval`).
+- Template: nome, descricao, fonte de dados e corpo da mensagem.
+- Placeholders usam `{{path}}` com dot notation: `signers[0].name`, `signers.0.name`, `signers[].name`, `envelope.id`.
+- Sugestoes de campos vem do ultimo teste da fonte ou do preset do modulo.
+- `POST /whatsapp-templates/:id/preview` - Preview com `tenantId` (executa a fonte e renderiza 1 mensagem).
 
 ### **Regras de Notificação**
 - `GET /rules` - Listar
