@@ -1,0 +1,15 @@
+<svg width="560" height="160" viewBox="0 0 560 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="brandGradientLight" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1D4ED8"/>
+      <stop offset="100%" stop-color="#14B8A6"/>
+    </linearGradient>
+  </defs>
+  <rect width="560" height="160" rx="18" fill="#F8FAFC"/>
+  <rect x="232" y="40" width="80" height="80" rx="18" fill="url(#brandGradientLight)"/>
+  <path d="M252 80c8-10 18-14 28-14 9 0 18 4 26 12" stroke="#0F172A" stroke-width="8" stroke-linecap="round"/>
+  <path d="M292 80c-8 10-18 14-28 14-9 0-18-4-26-12" stroke="#0F172A" stroke-width="8" stroke-linecap="round"/>
+  <text x="36" y="95" font-family="Inter, Arial, sans-serif" font-size="48" font-weight="700" fill="#0F172A">FORBIZ</text>
+  <text x="330" y="95" font-family="Inter, Arial, sans-serif" font-size="40" font-weight="600" fill="#0F172A">getwork</text>
+  <text x="40" y="122" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="500" fill="#334155">Business Software</text>
+</svg>

@@ -42,9 +42,9 @@ export function Sidebar() {
       {/* Logo */}
       <div className="p-4 border-b border-slate-800">
         <img 
-          src="/logo-light.png" 
+          src="/logo-dark.png" 
           alt="Forbiz & GetWork" 
-          className="h-9 w-auto mx-auto"
+          className="h-10 w-auto mx-auto object-contain"
         />
       </div>
 

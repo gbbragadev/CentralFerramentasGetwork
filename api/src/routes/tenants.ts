@@ -31,30 +31,44 @@ const updateTenantSchema = z.object({
 
 const credentialsSchema = z.object({
   baseUrl: z.string().url('URL inválida'),
+  seniorTenant: z.string().min(1, 'Tenant Senior obrigatório'),
   authToken: z.string().min(1).optional(),
-  username: z.string().min(1).optional(),
+  username: z.string().min(1, 'Usuário obrigatório'),
   password: z.string().min(1).optional(),
+  environment: z.enum(['production', 'sandbox']).default('production'),
   demoMode: z.boolean().default(true),
 }).refine((data) => {
-  return Boolean(data.authToken || (data.username && data.password));
+  return Boolean(data.authToken || data.password);
 }, {
-  message: 'Informe authToken ou username/password',
+  message: 'Informe authToken ou senha',
 });
 
 const testConnectionSchema = z.object({
   baseUrl: z.string().url('URL inválida'),
+  seniorTenant: z.string().min(1, 'Tenant Senior obrigatório'),
   username: z.string().min(1, 'Usuário obrigatório'),
   password: z.string().min(1, 'Senha obrigatória'),
   demoMode: z.boolean().default(false),
-  environment: z.string().optional(),
+  environment: z.enum(['production', 'sandbox']).default('production'),
 });
 
 const normalizeAuthToken = (token: string) => (
   token.startsWith('Bearer ') ? token : `Bearer ${token}`
 );
 
-async function authenticateSenior(baseUrl: string, username: string, password: string) {
-  const loginUrl = `${baseUrl.replace(/\/$/, '')}/platform/authentication/actions/login`;
+function buildSeniorBaseUrl(baseUrl: string, seniorTenant: string) {
+  const normalizedBase = baseUrl.replace(/\/$/, '');
+  if (normalizedBase.includes('/bridge/1.0/rest')) {
+    return normalizedBase;
+  }
+  if (normalizedBase.includes('/t/')) {
+    return `${normalizedBase}/bridge/1.0/rest`;
+  }
+  return `${normalizedBase}/t/${seniorTenant}/bridge/1.0/rest`;
+}
+
+async function authenticateSenior(baseUrl: string, seniorTenant: string, username: string, password: string) {
+  const loginUrl = `${buildSeniorBaseUrl(baseUrl, seniorTenant)}/platform/authentication/actions/login`;
   const response = await fetch(loginUrl, {
     method: 'POST',
     headers: {
@@ -246,7 +260,15 @@ export async function tenantsRoutes(app: FastifyInstance) {
     // Mascarar token
     return success({
       id: credentials.id,
+      tenantId: credentials.tenantId,
+      seniorTenant: credentials.seniorTenant,
+      username: credentials.username,
+      environment: credentials.environment as 'production' | 'sandbox',
       baseUrl: credentials.baseUrl,
+      isActive: credentials.isActive,
+      lastAuthAt: credentials.lastAuthAt,
+      lastAuthError: credentials.lastAuthError,
+      tokenExpiresAt: credentials.tokenExpiresAt,
       demoMode: credentials.demoMode,
       authToken: credentials.authToken.substring(0, 20) + '***',
       createdAt: credentials.createdAt,
@@ -267,13 +289,17 @@ export async function tenantsRoutes(app: FastifyInstance) {
 
     let authToken = body.authToken;
     let tokenExpiresAt: Date | null = null;
+    let lastAuthAt: Date | null = null;
+    let lastAuthError: string | null = null;
 
     if (body.demoMode) {
       authToken = authToken ? normalizeAuthToken(authToken) : 'Bearer DEMO_TOKEN';
+      lastAuthAt = new Date();
     } else if (!authToken && body.username && body.password) {
-      const authResult = await authenticateSenior(body.baseUrl, body.username, body.password);
+      const authResult = await authenticateSenior(body.baseUrl, body.seniorTenant, body.username, body.password);
 
       if (!authResult.success) {
+        lastAuthError = authResult.error;
         return reply.status(401).send(apiError(ErrorCodes.INVALID_CREDENTIALS, authResult.error));
       }
 
@@ -281,6 +307,7 @@ export async function tenantsRoutes(app: FastifyInstance) {
       if (authResult.expiresIn) {
         tokenExpiresAt = new Date(Date.now() + authResult.expiresIn * 1000);
       }
+      lastAuthAt = new Date();
     } else if (authToken) {
       authToken = normalizeAuthToken(authToken);
     }
@@ -294,23 +321,43 @@ export async function tenantsRoutes(app: FastifyInstance) {
       where: { tenantId: id },
       create: {
         tenantId: id,
+        seniorTenant: body.seniorTenant,
+        username: body.username,
+        environment: body.environment,
         baseUrl: body.baseUrl,
         authToken,
         demoMode: body.demoMode,
+        isActive: true,
+        lastAuthAt,
+        lastAuthError,
+        tokenExpiresAt,
       },
       update: {
+        seniorTenant: body.seniorTenant,
+        username: body.username,
+        environment: body.environment,
         baseUrl: body.baseUrl,
         authToken,
         demoMode: body.demoMode,
+        lastAuthAt,
+        lastAuthError,
+        tokenExpiresAt,
       },
     });
 
     return success({
       id: credentials.id,
+      tenantId: credentials.tenantId,
+      seniorTenant: credentials.seniorTenant,
+      username: credentials.username,
+      environment: credentials.environment as 'production' | 'sandbox',
       baseUrl: credentials.baseUrl,
+      isActive: credentials.isActive,
+      lastAuthAt: credentials.lastAuthAt,
+      lastAuthError: credentials.lastAuthError,
       demoMode: credentials.demoMode,
       authToken: credentials.authToken.substring(0, 20) + '***',
-      tokenExpiresAt,
+      tokenExpiresAt: credentials.tokenExpiresAt ?? tokenExpiresAt,
     });
   });
 
@@ -327,13 +374,13 @@ export async function tenantsRoutes(app: FastifyInstance) {
     if (body.demoMode) {
       return success({
         success: true,
-        message: 'Conexão simulada com sucesso (modo demo)',
+        message: 'Token recebido com sucesso (modo demo)',
         tokenPreview: 'Bearer DEMO_TOKEN',
         tokenExpiresAt: null,
       });
     }
 
-    const authResult = await authenticateSenior(body.baseUrl, body.username, body.password);
+    const authResult = await authenticateSenior(body.baseUrl, body.seniorTenant, body.username, body.password);
 
     if (!authResult.success) {
       return reply.status(401).send(apiError(ErrorCodes.INVALID_CREDENTIALS, authResult.error));
@@ -346,7 +393,7 @@ export async function tenantsRoutes(app: FastifyInstance) {
 
     return success({
       success: true,
-      message: 'Credenciais validadas com sucesso',
+      message: 'Token recebido com sucesso',
       tokenPreview,
       tokenExpiresAt,
     });

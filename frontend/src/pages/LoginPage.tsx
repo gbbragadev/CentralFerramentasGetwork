@@ -2,7 +2,6 @@ import { useState, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
 import { Loader2, AlertCircle, Lock, Mail, CheckCircle } from 'lucide-react';
-import { BrandMark } from '@/components/BrandMark';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -30,10 +29,15 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 flex">
-      {/* Left Panel - Branding */}
+      {/* Left Panel - Branding (fundo escuro = logo azul/dark) */}
       <div className="hidden lg:flex lg:w-1/2 bg-slate-950 items-center justify-center p-12">
         <div className="max-w-md text-white space-y-8">
-          <BrandMark variant="light" size="lg" />
+          {/* Logo azul para fundo escuro */}
+          <img 
+            src="/logo-dark.png" 
+            alt="Forbiz & GetWork" 
+            className="h-16 w-auto object-contain"
+          />
           
           <h2 className="text-2xl font-semibold mb-4">
             Gerencie suas integrações com Senior X
@@ -73,12 +77,16 @@ export function LoginPage() {
         </div>
       </div>
 
-      {/* Right Panel - Login Form */}
+      {/* Right Panel - Login Form (fundo claro = logo light) */}
       <div className="flex-1 flex items-center justify-center p-8 bg-slate-100">
         <div className="w-full max-w-md">
-          {/* Mobile Logo */}
+          {/* Mobile Logo - fundo claro */}
           <div className="lg:hidden flex items-center justify-center mb-8">
-            <BrandMark variant="dark" size="md" />
+            <img 
+              src="/logo-light.png" 
+              alt="Forbiz & GetWork" 
+              className="h-12 w-auto object-contain"
+            />
           </div>
 
           <div className="bg-white rounded-2xl shadow-xl border border-slate-200/70 p-8">
