@@ -188,8 +188,8 @@ export function TenantDetailPage() {
       toast.error('Informe o Usuário');
       return;
     }
-    // Para testar login real, sempre exigir senha (exceto demo)
-    if (!seniorForm.demoMode && !seniorForm.password.trim()) {
+    // Para testar login, sempre exigir senha
+    if (!seniorForm.password.trim()) {
       toast.error('Informe a Senha');
       return;
     }
