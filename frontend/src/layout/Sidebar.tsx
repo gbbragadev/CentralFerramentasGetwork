@@ -40,11 +40,11 @@ export function Sidebar() {
   return (
     <aside className="w-64 bg-slate-900 text-white flex flex-col h-screen fixed left-0 top-0">
       {/* Logo */}
-      <div className="p-4 border-b border-slate-800">
+      <div className="px-6 py-5 border-b border-slate-800">
         <img 
-          src="/logo-dark.png" 
+          src="/logo-light.png" 
           alt="Forbiz & GetWork" 
-          className="h-10 w-auto mx-auto object-contain"
+          className="h-14 w-auto mx-auto object-contain"
         />
       </div>
 
