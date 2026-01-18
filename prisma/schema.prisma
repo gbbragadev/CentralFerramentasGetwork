@@ -69,8 +69,8 @@ model Tenant {
 model SeniorCredentials {
   id           String   @id @default(uuid())
   tenantId     String   @unique @map("tenant_id")
-  seniorTenant String   @map("senior_tenant")
-  username     String   @map("username")
+  seniorTenant String   @default("") @map("senior_tenant")
+  username     String   @default("") @map("username")
   password     String?  @map("password")
   environment  String   @default("production")
   baseUrl      String   @default("https://platform.senior.com.br") @map("base_url")

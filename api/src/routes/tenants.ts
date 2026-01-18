@@ -81,12 +81,22 @@ async function authenticateSenior(baseUrl: string, seniorTenant: string, usernam
     };
   }
 
+  // jsonToken pode vir como string JSON - precisa parsear
+  let jsonToken = data?.jsonToken;
+  if (typeof jsonToken === 'string') {
+    try {
+      jsonToken = JSON.parse(jsonToken);
+    } catch {
+      jsonToken = null;
+    }
+  }
+
   const accessToken =
-    data?.jsonToken?.access_token ||
+    jsonToken?.access_token ||
     data?.access_token ||
     data?.token;
   const expiresIn =
-    data?.jsonToken?.expires_in ||
+    jsonToken?.expires_in ||
     data?.expires_in ||
     null;
 
@@ -268,7 +278,8 @@ export async function tenantsRoutes(app: FastifyInstance) {
     });
   });
 
-  // POST /tenants/:id/senior-credentials - Criar/Atualizar
+  // POST /tenants/:id/senior-credentials - Criar/Atualizar (apenas salva no banco)
+  // A autenticação real com a API Senior ocorre apenas em /test-senior-connection
   app.post('/:id/senior-credentials', async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = credentialsSchema.parse(request.body);
@@ -282,44 +293,22 @@ export async function tenantsRoutes(app: FastifyInstance) {
       return send404(reply, 'Tenant');
     }
 
-    let authToken = body.authToken;
-    let tokenExpiresAt: Date | null = null;
-    let lastAuthAt: Date | null = null;
-    let lastAuthError: string | null = null;
+    // Buscar credenciais existentes
     const existingCredentials = await prisma.seniorCredentials.findUnique({
       where: { tenantId: id },
     });
 
-    if (!authToken && body.username && body.password) {
-      const authResult = await authenticateSenior(baseUrl, body.seniorTenant, body.username, body.password);
+    // Usar token fornecido, existente ou placeholder
+    let authToken = body.authToken
+      ? normalizeAuthToken(body.authToken)
+      : existingCredentials?.authToken ?? 'PENDING_AUTH';
 
-      if (!authResult.success) {
-        lastAuthError = authResult.error;
-        return reply.status(401).send(apiError(ErrorCodes.INVALID_CREDENTIALS, authResult.error));
-      }
+    // Manter dados de autenticação existentes
+    const tokenExpiresAt = existingCredentials?.tokenExpiresAt ?? null;
+    const lastAuthAt = existingCredentials?.lastAuthAt ?? null;
+    const lastAuthError = existingCredentials?.lastAuthError ?? null;
 
-      authToken = normalizeAuthToken(authResult.accessToken);
-      if (authResult.expiresIn) {
-        tokenExpiresAt = new Date(Date.now() + authResult.expiresIn * 1000);
-      }
-      lastAuthAt = new Date();
-    } else if (authToken) {
-      authToken = normalizeAuthToken(authToken);
-      tokenExpiresAt = existingCredentials?.tokenExpiresAt ?? null;
-      lastAuthAt = existingCredentials?.lastAuthAt ?? null;
-      lastAuthError = existingCredentials?.lastAuthError ?? null;
-    } else if (existingCredentials?.authToken) {
-      authToken = existingCredentials.authToken;
-      tokenExpiresAt = existingCredentials.tokenExpiresAt;
-      lastAuthAt = existingCredentials.lastAuthAt;
-      lastAuthError = existingCredentials.lastAuthError;
-    }
-
-    if (!authToken) {
-      return send400(reply, ErrorCodes.INVALID_INPUT, 'Token ou credenciais inválidas');
-    }
-
-    // Upsert
+    // Upsert - apenas salva no banco
     const credentials = await prisma.seniorCredentials.upsert({
       where: { tenantId: id },
       create: {
@@ -330,10 +319,10 @@ export async function tenantsRoutes(app: FastifyInstance) {
         environment,
         baseUrl,
         authToken,
-        isActive: true,
-        lastAuthAt,
-        lastAuthError,
-        tokenExpiresAt,
+        isActive: false, // Inativo até testar conexão
+        lastAuthAt: null,
+        lastAuthError: null,
+        tokenExpiresAt: null,
       },
       update: {
         seniorTenant: body.seniorTenant,
@@ -341,7 +330,7 @@ export async function tenantsRoutes(app: FastifyInstance) {
         ...(hashedPassword && { password: hashedPassword }),
         environment,
         baseUrl,
-        authToken,
+        ...(body.authToken && { authToken }), // Só atualiza token se fornecido explicitamente
         lastAuthAt,
         lastAuthError,
         tokenExpiresAt,
@@ -358,12 +347,13 @@ export async function tenantsRoutes(app: FastifyInstance) {
       isActive: credentials.isActive,
       lastAuthAt: credentials.lastAuthAt,
       lastAuthError: credentials.lastAuthError,
-      authToken: credentials.authToken.substring(0, 20) + '***',
-      tokenExpiresAt: credentials.tokenExpiresAt ?? tokenExpiresAt,
+      authToken: credentials.authToken === 'PENDING_AUTH' ? 'Não autenticado' : credentials.authToken.substring(0, 20) + '***',
+      tokenExpiresAt: credentials.tokenExpiresAt,
     });
   });
 
   // POST /tenants/:id/test-senior-connection
+  // Testa a conexão e salva o token quando bem-sucedido
   app.post('/:id/test-senior-connection', async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = testConnectionSchema.parse(request.body);
@@ -376,13 +366,34 @@ export async function tenantsRoutes(app: FastifyInstance) {
     const authResult = await authenticateSenior(body.baseUrl, body.seniorTenant, body.username, body.password);
 
     if (!authResult.success) {
+      // Atualizar erro nas credenciais se existirem
+      await prisma.seniorCredentials.updateMany({
+        where: { tenantId: id },
+        data: {
+          lastAuthError: authResult.error,
+          isActive: false,
+        },
+      });
       return reply.status(401).send(apiError(ErrorCodes.INVALID_CREDENTIALS, authResult.error));
     }
 
-    const tokenPreview = normalizeAuthToken(authResult.accessToken).substring(0, 20) + '***';
+    const authToken = normalizeAuthToken(authResult.accessToken);
+    const tokenPreview = authToken.substring(0, 20) + '***';
     const tokenExpiresAt = authResult.expiresIn
       ? new Date(Date.now() + authResult.expiresIn * 1000)
       : null;
+
+    // Atualizar credenciais com o token obtido (se existirem)
+    await prisma.seniorCredentials.updateMany({
+      where: { tenantId: id },
+      data: {
+        authToken,
+        tokenExpiresAt,
+        lastAuthAt: new Date(),
+        lastAuthError: null,
+        isActive: true,
+      },
+    });
 
     return success({
       success: true,
