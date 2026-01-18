@@ -289,7 +289,6 @@ export async function tenantsRoutes(app: FastifyInstance) {
 
     let authToken = body.authToken;
     let tokenExpiresAt: Date | null = null;
-
     let lastAuthAt: Date | null = null;
     let lastAuthError: string | null = null;
 

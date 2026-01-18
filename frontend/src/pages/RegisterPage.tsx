@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
-import { BrandMark } from '@/components/BrandMark';
 import { apiClient } from '@/api/client';
 import { Mail, Lock, User, ArrowLeft, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -80,10 +79,15 @@ export function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 flex">
-      {/* Left side - Branding */}
+      {/* Left side - Branding (fundo escuro = logo azul/dark) */}
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-center items-center p-12 text-white">
         <div className="max-w-md space-y-8">
-          <BrandMark variant="light" size="lg" />
+          {/* Logo azul para fundo escuro */}
+          <img 
+            src="/logo-dark.png" 
+            alt="Forbiz & GetWork" 
+            className="h-16 w-auto object-contain"
+          />
           
           <h2 className="text-4xl font-bold mb-4">
             Crie sua conta
@@ -116,13 +120,17 @@ export function RegisterPage() {
         </div>
       </div>
 
-      {/* Right side - Form */}
+      {/* Right side - Form (fundo claro = logo light) */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-4 lg:p-12 bg-slate-100">
         <div className="w-full max-w-md">
           <div className="bg-white rounded-2xl shadow-xl border border-slate-200/70 p-8">
-            {/* Mobile branding */}
+            {/* Mobile branding - fundo claro */}
             <div className="lg:hidden flex items-center justify-center mb-6">
-              <BrandMark variant="dark" size="md" />
+              <img 
+                src="/logo-light.png" 
+                alt="Forbiz & GetWork" 
+                className="h-12 w-auto object-contain"
+              />
             </div>
 
             <div className="mb-6">
