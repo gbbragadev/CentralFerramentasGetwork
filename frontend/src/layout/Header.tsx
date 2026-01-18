@@ -31,7 +31,7 @@ export function Header({ title }: HeaderProps) {
   };
 
   return (
-    <header className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-8">
+    <header className="bg-white border-b border-slate-200/80 h-16 flex items-center justify-between px-8 shadow-sm">
       <div>
         <h1 className="text-xl font-semibold text-slate-900">{title}</h1>
       </div>

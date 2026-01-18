@@ -26,6 +26,19 @@ model User {
   @@map("users")
 }
 
+model Product {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  description String?
+  icon        String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("products")
+}
+
 enum UserRole {
   ADMIN
   VIEWER
@@ -54,11 +67,18 @@ model Tenant {
 
 // --- Credenciais do Senior X por tenant ---
 model SeniorCredentials {
-  id        String  @id @default(uuid())
-  tenantId  String  @unique @map("tenant_id")
-  baseUrl   String  @map("base_url")
-  authToken String  @map("auth_token")
-  demoMode  Boolean @default(true) @map("demo_mode")
+  id           String   @id @default(uuid())
+  tenantId     String   @unique @map("tenant_id")
+  seniorTenant String   @map("senior_tenant")
+  username     String   @map("username")
+  environment  String   @default("production")
+  baseUrl      String   @map("base_url")
+  authToken    String   @map("auth_token")
+  demoMode     Boolean  @default(true) @map("demo_mode")
+  isActive     Boolean  @default(true) @map("is_active")
+  lastAuthAt   DateTime? @map("last_auth_at")
+  lastAuthError String?  @map("last_auth_error")
+  tokenExpiresAt DateTime? @map("token_expires_at")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
