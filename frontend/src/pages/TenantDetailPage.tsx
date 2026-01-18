@@ -129,7 +129,13 @@ export function TenantDetailPage() {
     }
 
     setSaving(true);
-    const response = await apiClient.put(`/tenants/${tenantId}`, tenantForm);
+    // Mapear campos do form para o formato da API
+    const payload = {
+      name: tenantForm.name,
+      slug: tenantForm.domain,
+      active: tenantForm.isActive,
+    };
+    const response = await apiClient.put(`/tenants/${tenantId}`, payload);
     setSaving(false);
 
     if (response.error) {

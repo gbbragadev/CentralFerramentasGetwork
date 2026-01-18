@@ -36,7 +36,29 @@ model Product {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  tenants     TenantProduct[]
+
   @@map("products")
+}
+
+// --- Vínculo de Produtos por Tenant ---
+model TenantProduct {
+  id              String    @id @default(uuid())
+  tenantId        String    @map("tenant_id")
+  productId       String    @map("product_id")
+  monthlyValue    Decimal   @default(0) @map("monthly_value") @db.Decimal(10, 2)
+  acquisitionDate DateTime? @map("acquisition_date") @db.Date
+  expirationDate  DateTime? @map("expiration_date") @db.Date
+  isActive        Boolean   @default(true) @map("is_active")
+  notes           String?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, productId])
+  @@map("tenant_products")
 }
 
 enum UserRole {
@@ -61,6 +83,7 @@ model Tenant {
   outboxMessages       OutboxMessage[]
   deliveryLogs         DeliveryLog[]
   idempotencyKeys      IdempotencyKey[]
+  products             TenantProduct[]
 
   @@map("tenants")
 }
