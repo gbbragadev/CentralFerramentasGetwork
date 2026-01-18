@@ -75,7 +75,6 @@ model SeniorCredentials {
   environment  String   @default("production")
   baseUrl      String   @default("https://platform.senior.com.br") @map("base_url")
   authToken    String   @map("auth_token")
-  demoMode     Boolean  @default(false) @map("demo_mode")
   isActive     Boolean  @default(true) @map("is_active")
   lastAuthAt   DateTime? @map("last_auth_at")
   lastAuthError String?  @map("last_auth_error")

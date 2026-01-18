@@ -55,13 +55,12 @@ async function main() {
       },
     });
 
-    // Criar credenciais Senior (modo demo)
+    // Criar credenciais Senior de exemplo
     await prisma.seniorCredentials.create({
       data: {
         tenantId: tenant.id,
         baseUrl: 'https://platform.senior.com.br/t/senior.com.br/bridge/1.0/rest/platform',
         authToken: 'Bearer demo_token_aqui',
-        demoMode: true,
       },
     });
 
